@@ -1823,62 +1823,539 @@ public class Main {
 }
 ```
 
-# Access Modifiers
+## Access Modifiers
 
-## Project Structure
+Keywords that **control visibility** of classes, methods, constructors, and variables.
 
-### Public Access Modifier
+Java has **4** access modifiers:
 
-### Private Access Modifier
+* `public`
+* `private`
+* `protected`
+* *default* (no keyword)
 
-### Protected Access Modifier
+---
 
-### Default Access Modifier
+### Project Structure
 
-### Summary & Comparison of all Access Modifiers
+Most access-modifier questions assume:
 
-# Class Diagrams
+```
+project/
+   ├── package1/
+   │      └── A.java
+   └── package2/
+          └── B.java
+```
 
-## Inheritance
+Visibility depends on:
 
-## Association
+* **same class**
+* **same package**
+* **subclass**
+* **different package**
 
-## Aggregation
+---
 
-## Difference between Association & Aggregation
+### SUMMARY TABLE
 
-## Composition
+| Access Modifier | Same Class | Same Package | Subclass (different package) | Other Package              |
+| --------------- | ---------- | ------------ | ---------------------------- | -------------------------- |
+| **public**      | ✔          | ✔            | ✔                            | ✔                          |
+| **protected**   | ✔          | ✔            | ✔                            | ❌ (except via inheritance) |
+| **default**     | ✔          | ✔            | ❌                            | ❌                          |
+| **private**     | ✔          | ❌            | ❌                            | ❌                          |
 
-## Dependency
+---
 
-## Difference between Association & Dependency
+### **Interview Points**
 
-## Realization
+**Private is NOT inherited.**
+Even subclasses cannot access it.
 
-## Summing all at ONE PLACE
+**Protected is inherited.**
+Subclass in another package can access it **only using `this` or directly**, not through object.
 
-# Generics & WildCards
+```java
+sub.x;   // ❌ not allowed if x is protected in different package
+```
 
-## Generic Method
+**Classes can only be:**
+* `public`
+* *default*
 
-## Generic Classes
+(Classes **cannot** be `protected` or `private` at top level.)
 
-## Note on Usage of Generics
+**Constructors follow same visibility rules.**
 
-## Benefits of Generics
+**Most restrictive → least restrictive:**
+private → default → protected → public
 
-## WildCards in Generics
+---
 
-### Unbounded WildCards
+# Class Relationships and Diagrams in OOP
 
-### Upper Bound WildCards
+Class relationships describe how different classes interact with each other in a system. These relationships are represented using **UML diagrams**.
 
-### Lower Bound WildCards
+Below are all key class relationships, their purpose, UML symbols, and Java examples.
 
-## Generics vs WildCards
+---
 
-## When to use Wildcards vs Generics
+## 1. Inheritance (Generalization)
 
+**Definition:**
+A relationship where a class (subclass) inherits properties and behaviors from another class (superclass).
+
+**Purpose:**
+Promotes code reuse and establishes a hierarchical relationship.
+
+**UML Representation:**
+Hollow arrow pointing from subclass → superclass.
+
+**Example:**
+
+```java
+class Animal {
+    void eat() {}
+}
+
+class Dog extends Animal {
+    void bark() {}
+}
+```
+
+**Diagram:**
+
+```
+[Dog] <>-----|> [Animal]
+```
+
+---
+
+## 2. Association
+
+**Definition:**
+A relationship where one class is related to another, but there is no ownership.
+
+**Purpose:**
+Represents a simple connection between two classes.
+
+**UML Representation:**
+Solid line.
+
+**Example:**
+
+```java
+class Teacher {
+    String name;
+}
+
+class Student {
+    Teacher teacher;
+}
+```
+
+**Diagram:**
+
+```
+[Student] ---- [Teacher]
+```
+
+---
+
+## 3. Aggregation
+
+**Definition:**
+A “whole–part” relationship where one class (whole) contains another (part), but the part can exist independently.
+
+**Purpose:**
+Represents weak ownership.
+
+**UML Representation:**
+Hollow diamond on the whole-class side.
+
+**Example:**
+
+```java
+class Department {
+    List<Professor> professors;
+}
+
+class Professor {
+    String name;
+}
+```
+
+**Diagram:**
+
+```
+[Department] o---- [Professor]
+```
+
+---
+
+## 4. Composition
+
+**Definition:**
+A “whole–part” relationship where the part **cannot exist without** the whole.
+
+**Purpose:**
+Represents strong ownership.
+
+**UML Representation:**
+Solid diamond on the whole-class side.
+
+**Example:**
+
+```java
+class Car {
+    Engine engine;
+}
+
+class Engine {
+    String model;
+}
+```
+
+**Diagram:**
+
+```
+[Car] *---- [Engine]
+```
+
+---
+
+## 5. Dependency
+
+**Definition:**
+A relationship where one class depends on another for functionality. No ownership.
+
+**Purpose:**
+Represents a temporary/weak link.
+
+**UML Representation:**
+Dashed arrow from dependent → independent class.
+
+**Example:**
+
+```java
+class Printer {
+    void print(Document doc) {}
+}
+
+class Document {
+    String content;
+}
+```
+
+**Diagram:**
+
+```
+[Printer] --> [Document]
+```
+
+---
+
+## 6. Realization (Interface Implementation)
+
+**Definition:**
+A relationship where a class implements an interface.
+
+**Purpose:**
+Allows a class to provide implementations for abstract interface methods.
+
+**UML Representation:**
+Hollow arrow pointing from class → interface.
+
+**Example:**
+
+```java
+interface Drivable {
+    void start();
+    void stop();
+}
+
+class Car implements Drivable {
+    public void start() {}
+    public void stop() {}
+}
+```
+
+**Diagram:**
+
+```
+[Car] <>----|> [Drivable]
+```
+
+---
+
+## Summary Table
+
+| Relationship    | Description                                         | UML Representation        | Example                   |
+| --------------- | --------------------------------------------------- | ------------------------- | ------------------------- |
+| **Inheritance** | Subclass inherits from superclass.                  | Hollow arrow              | `Dog extends Animal`      |
+| **Association** | Simple connection between classes.                  | Solid line                | `Student — Teacher`       |
+| **Aggregation** | Weak whole-part. Part can exist independently.      | Hollow diamond            | `Department — Professor`  |
+| **Composition** | Strong whole-part. Part cannot exist without whole. | Solid diamond             | `Car — Engine`            |
+| **Dependency**  | Temporary/weak relationship.                        | Dashed arrow              | `Printer — Document`      |
+| **Realization** | Class implements interface.                         | Hollow arrow to interface | `Car implements Drivable` |
+
+---
+
+## Key Points
+
+1. **Inheritance:** Subclass inherits from superclass.
+2. **Association:** Simple connection without ownership.
+3. **Aggregation:** Weak whole-part relationship.
+4. **Composition:** Strong whole-part relationship.
+5. **Dependency:** Temporary or weak link.
+6. **Realization:** Class implements an interface.
+
+# Generics and Wildcards in Java
+
+**Generics** and **wildcards** are powerful features in Java that allow type-safe programming by enabling the use of types as parameters. They help create reusable, flexible code while maintaining type safety.
+
+---
+
+## One-Line Summary
+
+* `<T>` defines a type
+* `?` is unknown
+* `? extends` = read-only
+* `? super` = write-friendly
+* Generics provide strong typing; wildcards provide flexibility
+
+---
+
+### Why Generics?
+
+* Enable type safety at compile-time
+* Remove need for manual type casting
+* Increase code reusability
+* Make APIs cleaner and easier to maintain
+
+---
+
+## 1. Generic Classes
+
+**Definition:**
+Classes that accept a type parameter.
+
+**Purpose:**
+Allow working with multiple data types safely.
+
+**Key Points**
+
+* Use `<T>` to define a type parameter.
+* Multiple type parameters allowed: `<T, U>`.
+* Generics work only with reference types (not primitives).
+
+**Example**
+
+```java
+class Box<T> {
+    private T item;
+    public void setItem(T item) { this.item = item; }
+    public T getItem() { return item; }
+}
+```
+
+**Multiple Type Parameters**
+
+```java
+class Pair<T, U> {
+    T first; U second;
+}
+```
+
+**No primitive generics**
+
+```java
+// Not allowed
+Box<int> box;
+
+// Use wrapper
+Box<Integer> box;
+```
+
+---
+
+## 2. Generic Methods
+
+**Definition:**
+Methods that use type parameters (placed before return type).
+
+**Purpose:**
+Make methods type-agnostic.
+
+**Example**
+
+```java
+public <T> void print(T value) { System.out.println(value); }
+```
+
+**Notes**
+
+* `<T>` must appear before return type.
+* Can be static because type parameters belong to the method, not the class.
+
+---
+
+## 3. Benefits of Generics
+
+### 1. Type Safety
+
+Compile-time checking; fewer runtime errors.
+
+### 2. Code Reusability
+
+One class/method works with multiple types.
+
+### 3. Readability and Maintainability
+
+Explicit types make code clear.
+
+### 4. No Type Casting Needed
+
+Avoids `ClassCastException`.
+
+**Without generics**
+
+```java
+Object obj = list.get(0);
+String s = (String) obj; // Risky
+```
+
+**With generics**
+
+```java
+String s = list.get(0); // Safe
+```
+
+---
+
+## Wildcards in Java
+
+### Why Wildcards?
+
+Used when the exact type is not known or not important.
+
+**Types**
+
+* `?` – unknown type
+* `? extends T` – T or its subclasses
+* `? super T` – T or its superclasses
+
+---
+
+## 4. Unbounded Wildcard — `?`
+
+**Use when:** Type doesn't matter; only reading.
+
+```java
+void printList(List<?> list) {
+    for (Object item : list) System.out.println(item);
+}
+```
+
+---
+
+## 5. Upper Bounded Wildcard — `? extends T`
+
+**Meaning:** Accepts T or its subclasses.
+**Use when:** Read-only operations.
+
+```java
+void printNumbers(List<? extends Number> list) {
+    for (Number num : list) System.out.println(num);
+}
+```
+
+---
+
+## 6. Lower Bounded Wildcard — `? super T`
+
+**Meaning:** Accepts T or its superclasses.
+**Use when:** Writing or adding values.
+
+```java
+void addNumbers(List<? super Integer> list) {
+    list.add(10);
+}
+```
+
+---
+
+## 7. Generics vs Wildcards (When to Use What)
+
+### Use Generics (`<T>`) When:
+
+* Consistent type across parameters
+* Adding elements to a collection
+* Returning types that must be preserved
+
+```java
+public <T> T getFirst(List<T> list) { return list.get(0); }
+```
+
+### Use Wildcards (`?`) When:
+
+* Only reading from a collection
+* Type is irrelevant to your logic
+* More flexibility is required
+
+```java
+void printList(List<?> list)
+```
+
+---
+
+## 8. Why You Can't Add to a `List<?>`
+
+`List<?>` means unknown type → compiler cannot ensure safety.
+
+```java
+list.add(value); // Compile-time error
+```
+
+---
+
+## 9. Wildcards Are Unsafe for Return Types
+
+A wildcard always forces return value to be `Object`.
+
+```java
+Object x = list.get(0);
+```
+
+Generics preserve the type:
+
+```java
+String x = list.get(0);
+```
+
+---
+
+## 10. Best Practices
+
+1. Use generics for type-safe classes and methods.
+2. Use wildcards for flexible method parameters.
+3. Use `? extends` for reading and `? super` for writing (PECS rule).
+4. Avoid excessive wildcard usage for readability.
+5. Prefer generic methods when returning typed data.
+
+
+---
+
+## Summary Table
+
+| Concept                | Description                      | Example Usage                           |
+| ---------------------- | -------------------------------- | --------------------------------------- |
+| **Generic Classes**    | Classes using type parameters    | `class Box<T>`                          |
+| **Generic Methods**    | Methods using type parameters    | `public <T> void printArray(T[] array)` |
+| **Unbounded Wildcard** | Represents any unknown type      | `List<?>`                               |
+| **Upper Bounded**      | Any subtype of a specific type   | `List<? extends Number>`                |
+| **Lower Bounded**      | Any supertype of a specific type | `List<? super Integer>`                 |
 
 ----
 # Pointers in C++, References in C++, References in Java.
