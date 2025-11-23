@@ -84,15 +84,537 @@
 
 # Constructors & Interview Ques.
 
-### Default Constructor
+A **constructor** is a special method in Java used to **initialize objects**.
+It is called **automatically** when an object is created using `new`.
 
-### Parameterized Constructor
+### Key Properties
 
-### Copy Constructor
+* Name = **same as class name**
+* **No return type** (not even `void`)
+* Can contain `return;` *but cannot return a value*
+* Compiler adds a **default constructor** if none is written
+* Runs **only once per object creation**
 
-### Private Constructor
+### Default Values in Java
 
-### This keyword
+Java assigns default values *before* the constructor runs:
+
+| Type      | Default |
+| --------- | ------- |
+| `int`     | `0`     |
+| `double`  | `0.0`   |
+| `boolean` | `false` |
+| `Object`  | `null`  |
+
+### Types of Constructors
+
+### 1. Default Constructor (Compiler Provided)
+Constructor with **no arguments**, created automatically if no constructor is defined.
+**Example**
+
+```java
+public class Car {
+    String color; // default: null
+}
+Car c = new Car(); // compiler-created default constructor
+```
+
+---
+
+### 2. No-Argument (User-Defined) Constructor
+
+```java
+public class Car {
+    String color;
+
+    public Car() { // user-defined no-arg constructor
+        color = "Blue";
+    }
+}
+```
+### 3. Parameterized Constructor
+
+Used for custom initialization.
+
+```java
+public class Car {
+    String color;
+
+    public Car(String color) {
+        this.color = color;
+    }
+}
+```
+**Contructor overloading**:
+Multiple constructors with different parameter lists.
+
+```java
+public class Car {
+    String color;
+    int price;
+
+    Car() {
+        this("Black", 500000);
+    }
+
+    Car(String color) {
+        this.color = color;
+    }
+
+    Car(String color, int price) {
+        this.color = color;
+        this.price = price;
+    }
+}
+```
+
+---
+
+### 4. Copy Constructor (Custom in Java)
+
+Java does NOT have automatic copy constructors (C++ does).
+We implement manually:
+
+```java
+public class My {
+    int x;
+
+    public My(int x) {
+        this.x = x;
+    }
+
+    public My(My m) {     // Copy constructor
+        this.x = m.x;     // shallow copy
+    }
+}
+```
+
+### 5. Private Constructor
+
+Private constructors **restrict object creation** from outside.
+
+#### **Use-Case 1 — Prevent Instantiation (Utility Classes)**
+
+```java
+public class MathUtils {
+    private MathUtils() {}  // prevent instantiation
+
+    public static int add(int a, int b) {
+        return a + b;
+    }
+}
+```
+
+#### **Use-Case 2 — Singleton Pattern**
+
+```java
+public class Singleton {
+    private static Singleton instance;
+    private Singleton() {}
+
+    public static Singleton getInstance() {
+        if (instance == null)
+            instance = new Singleton();
+        return instance;
+    }
+}
+```
+
+#### **Use-Case 3 — Initialization in Derived Classes**
+
+```java
+public class BaseClass {
+    private BaseClass() {}
+
+    public static BaseClass createInstance() {
+        return new BaseClass();
+    }
+}
+```
+
+#### **Use-Case 4 — Prevent Subclassing**
+
+```java
+public final class FinalClass {
+    private FinalClass() {}
+}
+```
+
+**Utility Class Example**
+
+```java
+public class StringUtils {
+    private StringUtils() {}
+
+    public static String reverse(String s) {
+        return new StringBuilder(s).reverse().toString();
+    }
+}
+```
+
+## **Assignment Operator vs Copy Constructor**
+
+ **C++**
+
+* Assignment operator and copy constructor **both exist**
+* Default versions create **shallow copy of non-static members**
+* You can override them to create **deep copy**
+
+--- 
+
+**Java**
+
+**Assignment Operator (`=`)**
+
+* **Primitives:** value copied
+* **Objects:** reference copied (no new object)
+
+**Copy Constructor (Manual)**
+
+* Your custom constructor
+* Creates **shallow copy** unless you deep copy fields manually.
+
+
+```java
+class My {
+    public int x;
+
+    public My(int x) {
+        this.x = x;
+    }
+
+    public My(My m) { // copy constructor
+        this.x = m.x;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        int a = 10;
+        int b = a;      // primitive → value copied
+
+        String str1 = new String("Hello");
+        String str2 = str1;   // reference copied
+        // BUT strings are immutable → behaves like value copy
+
+        My my = new My(20);
+        My my2 = my;          // reference copy
+        My my3 = new My(my);  // copy constructor → new object
+
+        my.x = 30;
+
+        System.out.println(my.x);   // 30
+        System.out.println(my2.x);  // 30 → same reference
+        System.out.println(my3.x);  // 20 → copy constructor → new object
+    }
+}
+```
+
+## Shallow Copy vs Deep Copy
+
+### Shallow Copy
+
+* Copies values of primitive fields
+* Copies **references** for objects
+  → Modified nested objects affect both copies
+
+**Example**
+
+```java
+class Engine {
+    String type;
+    Engine(String type) { this.type = type; }
+}
+
+class Car {
+    String model;
+    Engine engine;
+
+    Car(String model, Engine engine) {
+        this.model = model;
+        this.engine = engine; // shallow copy
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Engine engine = new Engine("V6");
+
+        Car car1 = new Car("Sedan", engine);
+        Car car2 = new Car("SUV", car1.engine);
+
+        car2.engine.type = "V8"; // affects both
+
+        System.out.println(car1.engine.type); // V8
+    }
+}
+```
+
+### **Deep Copy**
+
+You manually create new nested objects.
+
+```java
+Car(Car other) {
+    this.model = other.model;
+    this.engine = new Engine(other.engine.type);
+}
+```
+
+## Constructors & Inheritance
+
+* Child constructor **must** call parent constructor (explicitly or implicitly)
+* If parent has **no no-arg constructor**, child **must use `super(...)`**
+* `super()` must be **first line**
+
+### Example
+
+```java
+class Vehicle {
+    Vehicle(String type) { }
+}
+
+class Car extends Vehicle {
+    Car() {
+        super("Four Wheeler"); // must call parent
+    }
+}
+```
+
+### `this()` and `super()` in Constructors
+
+**`this()`**
+
+Calls another constructor in the same class.
+* Must be **first statement**
+* Cannot be used with `super()` in the same constructor
+  
+**`super()`**
+
+Calls parent class constructor.
+* Must be **first statement**
+* If not written, compiler inserts `super()`
+
+#### Interview Ques: Why Constructors Cannot Be `static`, `final`, or `abstract`?
+
+**Not static**
+Because constructors run when **object is created**, but static members run **without objects**.
+**Not final**
+Final = cannot be overridden.
+Constructors **cannot** be inherited → nothing to override.
+**Not abstract**
+Abstract method = must be overridden.
+But constructor cannot be inherited → cannot be overridden → meaningless.
+
+#### Interview Ques: Why must `super()` be the first statement?
+Java must first build the parent part of the child object.The child object contains the parent object inside it. So the JVM requires the parent constructor to run before anything else. Else, compilation error.
+
+* Constructor = special method for initialization
+* Compiler provides default constructor only if none exists
+* Assignment in Java copies references for objects
+* Manual copy constructor = shallow copy unless deep copy implemented
+* Private constructors used for utilities, Singleton, preventing subclassing
+* `this()` & `super()` cannot coexist & must be first line
+* Constructors cannot be `static`, `final`, `abstract`
+* Child constructors must call parent constructors
+
+---
+Here is a clean, **fully-formatted Markdown version** of everything from your screenshots.
+As requested:
+
+* **Heading starts with `###`**
+* **No numbering anywhere**
+* **Crisp, organised, developer-ready formatting**
+
+---
+
+## `this` Keyword
+
+Refers to current instance of class. Especially usefull in constructor chaining.
+
+
+### 1. Referencing Current Class Instance Variables
+
+**Purpose:**
+To distinguish between instance variables and local variables with the same name.
+
+**Example:**
+
+```java
+public class Car {
+    private String color;
+
+    public void setColor(String color) {
+        this.color = color; // 'this.color' is instance var, 'color' is parameter
+    }
+}
+```
+
+**Key Point:**
+Ensures the instance variable is assigned using the parameter, not the local variable.
+
+### 2. Invoking Current Class Constructors (Constructor Chaining)
+
+**Purpose:**
+To call another constructor in the same class.
+
+**Example:**
+
+```java
+public class Car {
+    private String color;
+    private int speed;
+
+    // Constructor 1
+    public Car() {
+        this("Black", 0); // Calls Constructor 2
+    }
+
+    // Constructor 2
+    public Car(String color, int speed) {
+        this.color = color;
+        this.speed = speed;
+    }
+}
+```
+
+**Key Point:**
+`this(...)` must be the **first statement** inside a constructor.
+
+### 3. Invoking Current Class Methods
+
+**Purpose:**
+To call another method of the same class.
+
+**Example:**
+
+```java
+public class Car {
+    public void start() {
+        System.out.println("Car started");
+    }
+
+    public void accelerate() {
+        this.start(); // Calls start()
+        System.out.println("Car accelerating");
+    }
+}
+```
+
+**Key Points:**
+
+* Can be used to call any method inside the same class.
+* Optional, but improves clarity.
+
+### 4. Returning the Current Object
+
+**Purpose:**
+To return the current object, enabling **method chaining**.
+
+**Example:**
+
+```java
+public class Car {
+    private String color;
+
+    public Car setColor(String color) {
+        this.color = color;
+        return this; // Return current object
+    }
+
+    public void display() {
+        System.out.println("Color: " + color);
+    }
+}
+
+Car myCar = new Car().setColor("Red").display();
+```
+
+**Key Points:**
+
+* Used in fluent APIs and builder patterns.
+* Allows multiple method calls in a single statement.
+
+
+### 5. Passing Current Object as an Argument
+
+**Purpose:**
+To pass the current object to another method or constructor.
+
+**Example:**
+
+```java
+public class Car {
+    private String model;
+
+    public Car(String model) {
+        this.model = model;
+    }
+
+    public void register(Car car) {
+        System.out.println("Registering " + car.model);
+    }
+
+    public void selfRegister() {
+        this.register(this); // Passes current object
+    }
+}
+
+Car myCar = new Car("Sedan");
+myCar.selfRegister(); // Output: Registering Sedan
+```
+
+**Key Point:**
+Useful when a method needs to operate on the current object.
+
+
+### 6. Inner Classes
+
+**Purpose:**
+To refer to the outer class instance from an inner class.
+
+**Example:**
+
+```java
+public class OuterClass {
+    private String outerField = "Outer";
+
+    public class InnerClass {
+        private String innerField = "Inner";
+
+        public void display() {
+            System.out.println("Outer Field: " + OuterClass.this.outerField);
+            System.out.println("Inner Field: " + innerField);
+        }
+    }
+
+    public InnerClass getInnerClass() {
+        return new InnerClass();
+    }
+}
+
+OuterClass outer = new OuterClass();
+OuterClass.InnerClass inner = outer.getInnerClass();
+inner.display();
+```
+
+**Key Point:**
+`OuterClass.this` removes ambiguity between outer and inner class fields.
+
+### Summary Table
+
+| Use Case                           | Description                                         | Example Usage                |
+| ---------------------------------- | --------------------------------------------------- | ---------------------------- |
+| Referencing Instance Variables     | Distinguishes between instance and local variables  | `this.color = color;`        |
+| Invoking Constructors              | Calls another constructor in the same class         | `this("Black", 0);`          |
+| Invoking Methods                   | Calls another method in the same class              | `this.start();`              |
+| Returning Current Object           | Enables method chaining                             | `return this;`               |
+| Passing Current Object as Argument | Passes current object to another method/constructor | `this.register(this);`       |
+| Inner Classes                      | Refers to outer instance from inner class           | `OuterClass.this.outerField` |
+
+**Disadvantage:** `this` cannot be used in static methods. Static methods do not belong to any specific instance; they are associated with the class itself. Since there is no instance in a static context, using this leads to a compilation error‍.
+
+---
 
 # Pillars of OOPS
 
