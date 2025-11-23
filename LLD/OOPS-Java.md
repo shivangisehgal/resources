@@ -620,69 +620,1208 @@ inner.display();
 
 ## Polymorphism and It's Types
 
-### Compile Time (Static) Polymorphism
+Polymorphism allows the same method name to behave differently based on context — either at **compile time** or **runtime**.
 
-### Run Time (Dynamic) Polymorphism
+### Compile-Time Polymorphism (Method Overloading)
 
-### Shallow copy, Deep Copy
+**Definition:**
+Achieved through *method overloading*, where multiple methods in the same class share the same name but have different parameter lists (type, count, or order).
+
+**Behavior:**
+The method to call is decided at **compile time** based on the method signature.
+
+**Example:**
+
+```java
+public class Calculator {
+
+    int add(int a, int b) {
+        return a + b;
+    }
+
+    double add(double a, double b) {
+        return a + b;
+    }
+
+    int add(int a, int b, int c) {
+        return a + b + c;
+    }
+}
+```
+
+**How It's Achieved:**
+
+* Compiler selects the method using the signature.
+* Decision happens during compilation.
+
+---
+
+### Runtime Polymorphism (Method Overriding)
+
+**Definition:**
+Achieved through *method overriding*, where a subclass provides a specific implementation of a method already defined in its superclass.
+
+**Behavior:**
+The method executed is determined at **runtime**, based on the actual object — not the reference type.
+(dynamic binding)
+
+**Example:**
+
+```java
+class Animal {
+    void sound() {
+        System.out.println("Animal makes a sound");
+    }
+}
+
+class Dog extends Animal {
+    @Override
+    void sound() {
+        System.out.println("Dog barks");
+    }
+}
+
+// Usage:
+Animal myDog = new Dog();
+myDog.sound(); // Output: Dog barks
+```
+
+**How It's Achieved:**
+
+* JVM decides the method at runtime.
+* Requires **inheritance** and **method overriding**.
+
+---
+
+## Shallow Copy and Deep Copy
+
+### Shallow Copy
+
+**Definition:**
+A copy where the new object references the **same memory locations** as the original for referenced fields.
+
+**Relevance in Polymorphism:**
+
+* No independent copies → changes in one object affect the other.
+* Not directly polymorphism, but affects object behavior in inheritance chains.
+
+**Example:**
+
+```java
+class Car {
+    String model;
+    Engine engine;
+
+    Car(String model, Engine engine) {
+        this.model = model;
+        this.engine = engine; // Shallow copy
+    }
+}
+
+class Engine {
+    String type;
+
+    Engine(String type) {
+        this.type = type;
+    }
+}
+```
+
+---
+
+### Deep Copy
+
+**Definition:**
+A copy where the new object receives **independent copies** of all referenced objects.
+
+**Relevance in Polymorphism:**
+
+* Changes in one object do not impact another.
+* Useful when multiple objects need separate internal states.
+
+**Example:**
+
+```java
+class Car {
+    String model;
+    Engine engine;
+
+    Car(String model, Engine engine) {
+        this.model = model;
+        this.engine = new Engine(engine.type); // Deep copy
+    }
+}
+```
+
+---
+
+### Summary Table
+
+| Concept                   | Description                                       | Example Usage                           |
+| ------------------------- | ------------------------------------------------- | --------------------------------------- |
+| Compile-Time Polymorphism | Method overloading; resolved at compile time.     | `int add(int a, int b)`                 |
+| Runtime Polymorphism      | Method overriding; resolved at runtime.           | `myDog.sound()`                         |
+| Shallow Copy              | Copies references; both objects share state.      | `car2.engine = car1.engine`             |
+| Deep Copy                 | Copies all objects independently; no shared state | `this.engine = new Engine(engine.type)` |
+
 
 ## Inheritance and It's types
 
-### Advantages & Disadvantages
+Inheritance allows a subclass to acquire fields and methods from a superclass. It promotes **code reuse**, **modularity**, and helps create **hierarchical relationships** between classes.
 
-### Conclusion
+---
+
+### Types of Inheritance in Java
 
 ### Single Inheritance
 
-### Multi Level Inheritance
+**Definition:**
+A subclass inherits from a single superclass.
+
+**Example:**
+
+```java
+class Animal {
+    void eat() {
+        System.out.println("Animal eats");
+    }
+}
+
+class Dog extends Animal {
+    void bark() {
+        System.out.println("Dog barks");
+    }
+}
+```
+
+---
+
+### Multilevel Inheritance
+
+**Definition:**
+A subclass inherits from another subclass.
+
+**Example:**
+
+```java
+class Animal {
+    void eat() {
+        System.out.println("Animal eats");
+    }
+}
+
+class Dog extends Animal {
+    void bark() {
+        System.out.println("Dog barks");
+    }
+}
+
+class Puppy extends Dog {
+    void sleep() {
+        System.out.println("Puppy sleeps");
+    }
+}
+```
+
+---
 
 ### Hierarchical Inheritance
 
-### Multiple Inheritance
+**Definition:**
+Multiple subclasses inherit from the same superclass.
+
+**Example:**
+
+```java
+class Animal {
+    void eat() {
+        System.out.println("Animal eats");
+    }
+}
+
+class Dog extends Animal {
+    void bark() {
+        System.out.println("Dog barks");
+    }
+}
+
+class Cat extends Animal {
+    void meow() {
+        System.out.println("Cat meows");
+    }
+}
+```
+
+---
+
+### Multiple Inheritance (Not Supported in Java)
+
+**Definition:**
+A subclass inherits from multiple superclasses.
+
+**Note:**
+Java does **not** support it due to the **Diamond Problem**.
+Instead, Java uses **interfaces** to achieve similar behavior.
+
+---
+
+## Specific Things About Inheritance in Java
+
+### Access Modifiers
+
+Inherited members follow superclass access rules:
+
+* **public** – accessible everywhere
+* **protected** – accessible within same package + subclasses
+* **default** (no modifier) – accessible within same package
+* **private** – not inherited
+
+---
+
+### Method Overriding
+
+A subclass provides a specific implementation of a method already defined in the superclass.
+
+**Example:**
+
+```java
+class Animal {
+    void sound() {
+        System.out.println("Animal makes a sound");
+    }
+}
+
+class Dog extends Animal {
+    @Override
+    void sound() {
+        System.out.println("Dog barks");
+    }
+}
+```
+
+---
+
+### `super` Keyword
+
+Used to access superclass constructors and methods.
+
+**Example:**
+
+```java
+class Dog extends Animal {
+    void sound() {
+        super.sound(); // Calls Animal's sound()
+        System.out.println("Dog barks");
+    }
+}
+```
+
+---
+
+## Multiple Inheritance in Java (via Interfaces)
+
+Java achieves multiple inheritance through **interfaces**, but behavior differs **before** and **after** Java 8.
+
+---
+
+### Before Java 8
+
+#### Interfaces as Multiple Inheritance of Type
+
+* A class could implement multiple interfaces → inherit multiple method signatures
+* Interfaces had **only abstract methods**
+* **Limitation:** If two interfaces had the same method signature → no conflict resolution
+
+**Example:**
+
+```java
+interface Flyable {
+    void fly();
+}
+
+interface Swimmable {
+    void swim();
+}
+
+class Duck implements Flyable, Swimmable {
+    public void fly() {}
+    public void swim() {}
+}
+```
+
+#### No Multiple Inheritance of State or Implementation
+
+Interfaces had no fields or concrete methods → no shared implementation possible.
+
+---
+
+### After Java 8
+
+#### Default Methods
+
+Interfaces can now have **default methods** with implementations.
+
+This allows inheritance of **type + implementation**.
+
+#### Handling Conflicts
+
+If two interfaces provide default methods with the same signature:
+
+* The implementing class **must override** the method
+* It can choose a specific interface's implementation using `InterfaceName.super.method()`
+
+**Example:**
+
+```java
+interface Flyable {
+    default void move() {
+        System.out.println("Flying.");
+    }
+}
+
+interface Swimmable {
+    default void move() {
+        System.out.println("Swimming.");
+    }
+}
+
+class Duck implements Flyable, Swimmable {
+    @Override
+    public void move() {
+        Flyable.super.move();
+        Swimmable.super.move();
+    }
+}
+```
+### Static Methods in Interfaces
+
+* Supported from Java 8
+* Not inherited by implementing classes
+
+### Private Methods in Interfaces (Java 9+)
+
+* Used to share helper logic for default methods
+
+### Key Differences (Before vs After Java 8)
+
+| Aspect                | Before Java 8         | After Java 8            |
+| --------------------- | --------------------- | ----------------------- |
+| Method Implementation | Only abstract methods | Default methods allowed |
+| Multiple Inheritance  | Type only             | Type + implementation   |
+| Conflict Resolution   | No mechanism          | Must explicitly resolve |
+| Static Methods        | Not allowed           | Allowed                 |
+| Private Methods       | Not allowed           | Allowed (Java 9+)       |
+
+---
+
+### Summary Table
+
+| Concept                  | Description                                | Example Usage                         |
+| ------------------------ | ------------------------------------------ | ------------------------------------- |
+| Single Inheritance       | One subclass inherits from one superclass  | `class Dog extends Animal`            |
+| Multilevel Inheritance   | Subclass inherits from another subclass    | `class Puppy extends Dog`             |
+| Hierarchical Inheritance | Multiple subclasses from same superclass   | `class Dog, class Cat extends Animal` |
+| Multiple Inheritance     | Not supported directly; interfaces instead | `class D implements A, B`             |
+| Diamond Problem          | Ambiguity in multiple inheritance          | `interface A, B` with default methods |
 
 ### Diamond Problem
 
-### Advantages & Disadvantages
+The diamond problem is a classic issue in multiple inheritance where a class inherits from two or more classes (or interfaces) that have the same method signature, causing ambiguity about which method to use.
 
-### Conclusion
+Java handles the diamond problem differently **before** and **after** Java 8.
 
-## Encapsulation
+---
 
-### Key Features of Encapsulation
+### Before Java 8
 
-### Examples & Explanation
+#### No Multiple Inheritance of Implementation
 
-### Advantages & Disadvantages
+* Java did **not** allow a class to extend multiple classes.
+* Interfaces could only have **abstract methods** (no implementation).
+* Because interfaces had no method bodies, **no ambiguity existed**.
 
-### Conclusion
+**Example:**
 
-## Abstraction
+```java
+interface A {
+    void method();
+}
 
-### Problem Without Abstraction
+interface B {
+    void method();
+}
 
-### Solution Using Abstraction
+class C implements A, B {
+    @Override
+    public void method() {
+        System.out.println("Method implementation.");
+    }
+}
+```
 
-### Advantages of Abstract Class
+**Explanation:**
+`C` simply provides one implementation of `method()`. No conflict → no diamond problem.
 
-### Disadvantages of Abstract Class
+#### Limitation Before Java 8
 
-# Interface in Java
+* Since interfaces could not have concrete methods, Java had **no way** to support multiple inheritance of implementation.
 
-## Example of an Interface
+---
 
-## Advantages of Using Interface
+### After Java 8
 
-## Disadvantages of using Interface
+#### Default Methods Introduced
 
-## Abstract Class vs Interface
+* Interfaces can now have **default methods** with implementations.
+* This introduced the possibility of **multiple inheritance of implementation**.
+* If two interfaces provide the same default method, a conflict occurs.
 
-## When to use Abstract Class vs Interface
+---
 
-## Multiple Inheritance with Interfaces
+### Solving the Diamond Problem (Java 8+)
 
-## Interview Questions - Abstract Class, Default Keyword & Interface
+If a class implements two interfaces with conflicting default methods, it must explicitly resolve the conflict by:
 
-## Conclusion
+* Overriding the method
+* Choosing one interface’s implementation using `InterfaceName.super.method()`
+* Or providing its own implementation
+
+**Example:**
+
+```java
+interface A {
+    default void method() {
+        System.out.println("A's method.");
+    }
+}
+
+interface B {
+    default void method() {
+        System.out.println("B's method.");
+    }
+}
+
+class C implements A, B {
+    @Override
+    public void method() {
+        A.super.method(); // Choose A's implementation
+        B.super.method(); // Choose B's implementation
+    }
+}
+```
+
+---
+
+### Key Rules
+
+* The implementing class **must** resolve the conflict — Java will not choose automatically.
+* If one interface's default method is chosen, it must be explicitly called using:
+
+  ```java
+  InterfaceName.super.method();
+  ```
+
+---
+
+### Key Differences (Before vs After Java 8)
+
+| Aspect               | Before Java 8                        | After Java 8                                |
+| -------------------- | ------------------------------------ | ------------------------------------------- |
+| Multiple Inheritance | Only type (no implementation)        | Type + implementation (via default methods) |
+| Diamond Problem      | Not applicable                       | Must resolve explicitly                     |
+| Conflict Resolution  | No conflicts (abstract methods only) | Must override and choose with `super`       |
+
+---
+
+### Example After Java 8
+
+```java
+interface Flyable {
+    default void move() {
+        System.out.println("Flying.");
+    }
+}
+
+interface Swimmable {
+    default void move() {
+        System.out.println("Swimming.");
+    }
+}
+
+class Duck implements Flyable, Swimmable {
+    @Override
+    public void move() {
+        Flyable.super.move();    // Choose Flyable's implementation
+        Swimmable.super.move();  // Choose Swimmable's implementation
+    }
+}
+```
+
+## Encapsulation in Java
+
+Encapsulation is a core OOP principle that bundles **data (fields)** and **methods that operate on the data** into a single class. It also restricts direct access to some fields using access modifiers like `private`, `protected`, and `public`.
+
+---
+
+### Key Concepts of Encapsulation
+
+#### Bundling
+
+**Definition:**
+Combining data and methods into a single unit (class).
+
+**Example:**
+
+```java
+public class BankAccount {
+    private String accountNumber;
+    private double balance;
+
+    public void deposit(double amount) {
+        if (amount > 0) {
+            balance += amount;
+        }
+    }
+
+    public double getBalance() {
+        return balance;
+    }
+}
+```
+
+---
+
+#### Data Hiding
+
+**Definition:**
+Restricting direct access to fields using `private` and exposing controlled access via getters/setters.
+
+**Example:**
+
+```java
+public class BankAccount {
+    private String accountNumber;
+
+    // Getter
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    // Setter
+    public void setAccountNumber(String accountNumber) {
+        if (accountNumber != null && !accountNumber.isEmpty()) {
+            this.accountNumber = accountNumber;
+        }
+    }
+}
+```
+
+---
+
+### Advantages of Encapsulation
+
+#### Data Protection
+
+* Fields are hidden from outside access → prevents unintended modifications.
+* Example: `balance` cannot be edited directly.
+
+#### Controlled Access
+
+* Getters and setters enable validation before updating fields.
+
+#### Flexibility
+
+* Internal implementation can be changed without affecting other parts of the program.
+
+#### Reusability
+
+* Encapsulated classes are modular and reusable.
+
+#### Maintainability
+
+* Makes debugging easier by localizing changes inside specific classes.
+
+---
+
+### Disadvantages of Encapsulation
+
+#### Complexity
+
+* Requires getters/setters → slightly more conceptual overhead for beginners.
+
+#### Performance Overhead
+
+* Accessing fields through methods is marginally slower than direct access (but negligible in modern JVMs).
+
+#### Verbosity
+
+* More boilerplate (getters/setters) unless using Lombok or IDE auto-generation.
+
+#### Over-Encapsulation
+
+* Too many getters/setters can create unnecessary complexity in simple programs.
+
+---
+
+## Abstraction in Java
+
+Abstraction hides internal implementation details and exposes only the essential features. It lets you focus on **what** an object does rather than **how** it does it.
+
+Example idea: `brewCoffee()` hides all brewing steps internally.
+
+Java achieves abstraction using:
+
+* **Abstract Classes** (partial abstraction)
+* **Interfaces** (full abstraction; especially after Java 8)
+
+---
+
+## Abstract Classes in Java
+
+An abstract class is declared using `abstract` and **cannot be instantiated**.
+It can contain:
+
+* Abstract methods (no body)
+* Concrete methods (with body)
+* Constructors
+* Instance fields (static, non-static, final, etc.)
+
+A concrete subclass **must** implement all abstract methods.
+
+**Example:**
+
+```java
+abstract class Animal {
+    abstract void makeSound();        // abstract method
+
+    void sleep() {                    // concrete method
+        System.out.println("Sleeping...");
+    }
+}
+
+class Dog extends Animal {
+    @Override
+    void makeSound() {
+        System.out.println("Bark");
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Animal a = new Dog();
+        a.makeSound();   // Bark
+        a.sleep();       // Sleeping...
+    }
+}
+```
+
+### When to Use Abstract Classes
+
+Use an abstract class when:
+
+* Subclasses share common **fields**, **methods**, or **initialization logic**
+* You want to provide some default behavior
+* You need protected members or non-static fields
+
+Abstract classes represent **partial abstraction**.
+
+---
+
+## Interfaces in Java
+
+An interface defines a **contract**: what methods a class must implement.
+
+Before Java 8 → only abstract methods and constants.
+After Java 8 → supports:
+
+* Default methods
+* Static methods
+* (Java 9+) Private methods
+
+**Key Features:**
+
+* 100% abstraction conceptually (until Java 8)
+* No constructors (cannot be instantiated)
+* Supports **multiple inheritance**
+* Fields are always `public static final`
+* Methods are:
+
+  * `public abstract` (by default)
+  * `default` (Java 8+)
+  * `static` (Java 8+)
+
+**Example:**
+
+```java
+interface Shape {
+    double calculateArea();
+}
+
+class Circle implements Shape {
+    private double radius;
+    Circle(double r) { this.radius = r; }
+
+    @Override
+    public double calculateArea() {
+        return Math.PI * radius * radius;
+    }
+}
+
+class Rectangle implements Shape {
+    private double l, w;
+    Rectangle(double l, double w) { this.l = l; this.w = w; }
+
+    @Override
+    public double calculateArea() {
+        return l * w;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Shape c = new Circle(5);
+        Shape r = new Rectangle(4, 6);
+
+        System.out.println(c.calculateArea());
+        System.out.println(r.calculateArea());
+    }
+}
+```
+
+---
+
+## Default & Static Methods in Interfaces (Java 8+)
+
+```java
+interface Vehicle {
+    void start();
+
+    default void honk() {          // default method
+        System.out.println("Honking");
+    }
+
+    static void service() {        // static method
+        System.out.println("Servicing...");
+    }
+}
+```
+
+**Why default methods?**
+
+* To add new methods to interfaces **without breaking existing implementations**
+* To provide shared default behavior
+
+Static methods are called via the interface name.
+
+---
+
+## Abstract Class vs Interface (Java 8+)
+
+| Aspect       | Abstract Class             | Interface                      |
+| ------------ | -------------------------- | ------------------------------ |
+| Methods      | Abstract + concrete        | Abstract + default + static    |
+| Fields       | Any type (instance/static) | Only `public static final`     |
+| Constructors | Allowed                    | Not allowed                    |
+| Inheritance  | Single inheritance         | Multiple inheritance           |
+| Use Case     | Shared code/state          | Contract for unrelated classes |
+
+---
+
+## Common Interview Questions
+
+### **1. What is abstraction?**
+
+Hiding implementation details and exposing only essential features. Achieved via abstract classes and interfaces.
+
+### **2. What is an abstract class?**
+
+A class with the `abstract` keyword. Cannot be instantiated. Can have abstract and concrete methods, constructors, and fields.
+
+### **3. Can an abstract class have a constructor?**
+
+Yes. Called when a subclass is instantiated. Used for shared initialization.
+
+### **4. Can an abstract class have static or final methods?**
+
+Yes.
+Final methods must have a body (cannot be abstract).
+
+### **5. What is an interface?**
+
+A contract defining methods a class must implement. Supports multiple inheritance.
+
+### **6. What are default methods?**
+
+Methods in an interface with a default implementation (Java 8+). Enable backward compatibility.
+
+### **7. Can a class implement multiple interfaces? Extend multiple classes?**
+
+* Yes, multiple interfaces
+* No, only one class (single inheritance)
+
+### **8. Can abstract methods be private or static?**
+
+No — they must be visible to subclasses and belong to an instance.
+
+### **9. Can you instantiate an abstract class?**
+
+No. You can only instantiate subclasses.
+
+### **10. When to use abstract class vs interface?**
+
+* **Abstract Class:** shared code, state, protected members
+* **Interface:** common contract for unrelated classes, multiple inheritance
+---
+
+## Extra Interview-Specific Notes
+
+* Abstract classes existed to give **more flexibility** than interfaces before Java 8
+* After Java 8, interfaces became more powerful but **cannot hold state**
+* Default methods allow safe interface evolution
+* Abstract classes can implement interfaces and leave methods abstract
+* Any class extending an abstract class **must** implement all abstract methods
+* `@Override` is optional but ensures the method actually overrides a parent/interface method
+
+  * If not, the compiler throws an error
+
+---
+
+## Quick Interview Answers
+
+### *Why use an abstract class over an interface?*
+
+Because you need:
+
+* Shared state
+* Constructors
+* Partially implemented behavior
+* Protected members
+
+### *Why were default methods introduced?*
+
+To prevent breaking all implementing classes when a new method is added to an interface.
+
+### *Can abstract methods be private or static?*
+
+No.
+They must be overridable.
+
+### **INTERFACES + ABSTRACT CLASS IMPLEMENTATION (SUPER CRISP VERSION)**
+
+---
+
+## **1. Types of Methods in Interfaces (Java 8+)**
+
+### **1️⃣ Abstract Methods**
+
+* Implicitly `public abstract`
+* Must be implemented by concrete classes (unless inherited by an abstract class)
+
+```java
+interface A {
+    void m1();  // abstract
+}
+```
+
+---
+
+### **2️⃣ Default Methods (Java 8+)**
+
+* Have a body
+* Can be overridden
+
+```java
+interface A {
+    default void m2() {
+        System.out.println("Default");
+    }
+}
+```
+
+---
+
+### **3️⃣ Static Methods (Java 8+)**
+
+* Have a body
+* **Not inherited** by implementing classes
+* Must be called with `InterfaceName.method()`
+
+```java
+interface A {
+    static void m3() { System.out.println("Static"); }
+}
+```
+
+---
+
+### **4️⃣ Private Methods (Java 9+)**
+
+* For **internal code reuse** inside the interface
+* Cannot be accessed or overridden by implementing classes
+
+```java
+interface A {
+    private void helper() {}
+    private static void log() {}
+}
+```
+
+---
+
+# **2. Abstract Class Implementing an Interface**
+
+An abstract class may:
+
+✔ implement **all** interface abstract methods
+✔ implement **some** methods
+✔ implement **none**
+
+But:
+
+➡ A **concrete** class must implement whatever remains.
+
+```java
+interface A {
+    void m1();
+    default void m2(){ System.out.println("Default"); }
+}
+
+abstract class B implements A {
+    // m1 not implemented → allowed
+}
+
+class C extends B {
+    @Override public void m1() { System.out.println("C"); }
+}
+```
+
+---
+
+# **3. All Method-Implementation Scenarios **
+
+This section is now **ultra-crisp** but complete.
+
+---
+
+### **CASE 1 — Abstract method NOT implemented by abstract class**
+
+```java
+interface A { void m1(); }
+abstract class B implements A { }
+```
+
+---
+
+### **CASE 2 — Abstract class implements interface abstract method**
+
+```java
+abstract class B implements A {
+    @Override public void m1() {}
+}
+```
+
+---
+
+### **CASE 3 — Concrete class must implement remaining methods**
+
+```java
+abstract class B implements A { }
+class C extends B {
+    @Override public void m1() {}
+}
+```
+
+---
+
+### **CASE 4 — Abstract class overrides default method**
+
+```java
+interface A { default void m2(){ System.out.println("A"); } }
+abstract class B implements A {
+    public void m2(){ System.out.println("B"); }
+}
+```
+
+---
+
+### **CASE 5 — Concrete class overrides default method**
+
+```java
+class C extends B {
+    @Override public void m2(){ System.out.println("C"); }
+}
+```
+
+---
+
+### **CASE 6 — Abstract class keeps default method**
+
+```java
+interface A { default void m2(){} }
+abstract class B implements A { }
+```
+
+---
+
+### **CASE 7 — Static interface method**
+
+➡ **Cannot be overridden** by class or abstract class
+
+```java
+interface A { static void m3(){} }
+abstract class B implements A { /* cannot override m3 */ }
+A.m3();   // only valid call
+```
+
+---
+
+### **CASE 8 — Private interface methods**
+
+➡ Not visible to implementing classes
+➡ Cannot be overridden
+
+```java
+interface A {
+    private void helper(){}
+    private static void log(){}
+}
+```
+
+---
+
+### **CASE 9 — Abstract class implements multiple interfaces**
+
+```java
+interface A { void m1(); }
+interface B { void m2(); }
+
+abstract class C implements A, B {
+    public void m1(){}     // implemented
+    // m2 left for child
+}
+```
+
+---
+
+### **CASE 10 — Conflicting default methods**
+
+➡ Abstract class **must override** to resolve conflict
+➡ Can choose which interface’s default to call
+
+```java
+interface A { default void m1(){ System.out.println("A"); } }
+interface B { default void m1(){ System.out.println("B"); } }
+
+abstract class C implements A, B {
+    @Override
+    public void m1(){
+        A.super.m1();  // pick A's version
+    }
+}
+```
+
+---
+
+# **4. Ultra-Crisp Interview Summary**
+
+### **Interface method types**
+
+* abstract
+* default
+* static
+* private (`private` + `private static`)
+
+---
+
+### **Rules**
+
+* Default methods **can** be overridden
+* Static methods **cannot** be overridden
+* Private methods are **internal only**
+* Abstract class may implement **0/1/all** abstract methods
+* Concrete class must finish whatever is left
+
+---
+
+### **Abstract Class + Interface (Key Points)**
+
+* If abstract class doesn’t implement all interface methods → stays abstract
+* Default methods can be:
+
+  * inherited
+  * overridden
+  * overridden with an explicit super call (in conflict cases)
+
+---
+
+## Encapsulation vs Abstraction in Java
+
+Encapsulation and abstraction are closely related OOP concepts, but they address **different goals**.
+Encapsulation focuses on **protecting data**, while abstraction focuses on **hiding implementation details** and exposing only what is necessary.
+
+### Differences
+
+| Aspect             | Encapsulation                                                        | Abstraction                                                                 |
+| ------------------ | -------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Definition**     | Bundling data and methods into a single unit and restricting access. | Hiding complex implementation details and exposing only essential features. |
+| **Purpose**        | Protects data and provides controlled access.                        | Reduces complexity and simplifies interaction with objects.                 |
+| **Implementation** | Achieved using access modifiers (`private`, `protected`, `public`).  | Achieved using abstract classes and interfaces.                             |
+| **Focus**          | Focuses on **how** data is accessed and modified.                    | Focuses on **what** the object does, not how it does it.                    |
+| **Example**        | `private` fields with getter/setter methods.                         | Abstract classes and interfaces with abstract methods.                      |
+
+---
+
+### Example Combining Encapsulation and Abstraction
+
+```java
+// Abstraction: Hiding implementation details
+abstract class Vehicle {
+
+    // Abstract method (no implementation)
+    abstract void start();
+
+    // Concrete method
+    void stop() {
+        System.out.println("Vehicle stopped");
+    }
+}
+```
+
+```java
+// Encapsulation: Protecting data and providing controlled access
+class Car extends Vehicle {
+    private String model;   // Encapsulated field
+
+    // Getter
+    public String getModel() {
+        return model;
+    }
+
+    // Setter
+    public void setModel(String model) {
+        this.model = model;
+    }
+
+    @Override
+    void start() {
+        System.out.println("car started");
+    }
+}
+```
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        Vehicle myCar = new Car();   // Abstraction: interacted through Vehicle reference
+        myCar.start();               // Output: "car started"
+        myCar.stop();                // Output: "Vehicle stopped"
+
+        // Encapsulation: Accessing model via getter/setter
+        ((Car) myCar).setModel("Sedan");
+        System.out.println(((Car) myCar).getModel());   // Output: "Sedan"
+    }
+}
+```
 
 # Access Modifiers
 
