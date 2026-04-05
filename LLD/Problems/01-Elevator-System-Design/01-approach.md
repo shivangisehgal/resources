@@ -1,6 +1,6 @@
 # LLD Interview Notes: Elevator System (Java)
 
-[Prettier Notes](https://htmlpreview.github.io/?https://github.com/shivangisehgal/repo/blob/main/LLD/Problems/01-Elevator-System-Design/prettier.html)
+[Prettier Notes](https://htmlpreview.github.io/?https://github.com/shivangisehgal/resources/blob/main/LLD/Problems/01-Elevator-System-Design/prettier.html)
 
 ## 0. The Golden Rule
 
