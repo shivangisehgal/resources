@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLD: Elevator System — Interview Notes</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --paper: #faf8f3;
+    --accent: #c0392b;
+    --accent2: #2563eb;
+    --highlight: #fef3c7;
+    --highlight2: #dbeafe;
+    --highlight3: #dcfce7;
+    --rule: #d1c9b8;
+    --muted: #6b7280;
+    --code-bg: #1e1e2e;
+    --code-text: #cdd6f4;
+    --tag-green: #166534;
+    --tag-green-bg: #dcfce7;
+    --tag-blue: #1e40af;
+    --tag-blue-bg: #dbeafe;
+    --tag-red: #991b1b;
+    --tag-red-bg: #fee2e2;
+    --tag-amber: #92400e;
+    --tag-amber-bg: #fef3c7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #e8e4db;
+    font-family: 'Lato', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .notebook {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--paper);
+    border-radius: 4px;
+    box-shadow: 4px 4px 0 #b5afa3, 8px 8px 0 #9e9890, 12px 12px 0 rgba(0,0,0,0.1);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Spiral binding dots */
+  .binding {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 48px;
+    background: #d4cfc6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 28px;
+    gap: 32px;
+    z-index: 10;
+  }
+  .hole {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #e8e4db;
+    border: 2px solid #b5afa3;
+    box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+  }
+
+  .content {
+    margin-left: 48px;
+    position: relative;
+  }
+
+  /* Red margin line */
+  .content::before {
+    content: '';
+    position: absolute;
+    left: 40px; top: 0; bottom: 0;
+    width: 2px;
+    background: rgba(192, 57, 43, 0.4);
+    z-index: 1;
+  }
+
+  /* Blue ruled lines */
+  .ruled-section {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 31px,
+      var(--rule) 31px,
+      var(--rule) 32px
+    );
+    padding: 0 2rem;
+  }
+
+  /* ── Cover ── */
+  .cover {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 3rem 2.5rem 2.5rem 3rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    right: -40px; bottom: -40px;
+    width: 200px; height: 200px;
+    border: 30px solid rgba(255,255,255,0.05);
+    border-radius: 50%;
+  }
+  .cover-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+  .cover h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+  }
+  .cover-sub {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.55);
+    font-weight: 300;
+    margin-bottom: 1.5rem;
+  }
+  .cover-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .badge-red { background: var(--accent); color: white; }
+  .badge-outline { border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); }
+
+  /* ── Section headers ── */
+  .section {
+    padding: 2.5rem 2.5rem 0 3rem;
+  }
+  .section:last-child { padding-bottom: 3rem; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid var(--ink);
+  }
+  .section-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .section-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+
+  /* ── Key insight callout ── */
+  .callout {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 1rem 1.25rem;
+    border-radius: 3px;
+    margin: 1.25rem 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    position: relative;
+  }
+  .callout strong { color: #fbbf24; }
+  .callout::before {
+    content: '★';
+    position: absolute;
+    right: 1rem;
+    top: 0.75rem;
+    color: #fbbf24;
+    font-size: 0.8rem;
+  }
+
+  .callout-blue {
+    background: var(--highlight2);
+    color: var(--ink);
+    border-left: 4px solid var(--accent2);
+  }
+  .callout-blue strong { color: var(--accent2); }
+  .callout-blue::before { content: ''; }
+
+  .callout-yellow {
+    background: var(--highlight);
+    color: var(--ink);
+    border-left: 4px solid #d97706;
+  }
+  .callout-yellow strong { color: #92400e; }
+  .callout-yellow::before { content: ''; }
+
+  .callout-green {
+    background: var(--highlight3);
+    color: var(--ink);
+    border-left: 4px solid #16a34a;
+  }
+  .callout-green strong { color: #166534; }
+  .callout-green::before { content: ''; }
+
+  /* ── Body text ── */
+  p {
+    font-size: 0.95rem;
+    line-height: 1.75;
+    margin-bottom: 0.75rem;
+  }
+
+  /* ── Requirement list ── */
+  .req-list {
+    list-style: none;
+    margin: 0.5rem 0 1rem;
+  }
+  .req-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .req-list li:last-child { border-bottom: none; }
+  .req-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: #fee2e2;
+    padding: 0.1rem 0.45rem;
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  /* ── Flow diagram (text-based) ── */
+  .flow {
+    background: #f5f3ee;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1.25rem 1.5rem;
+    margin: 1rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 2;
+    overflow-x: auto;
+  }
+  .flow .arrow { color: var(--accent); font-weight: 700; }
+  .flow .node {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.1rem 0.5rem;
+    border-radius: 2px;
+  }
+  .flow .node-blue {
+    background: var(--accent2);
+    color: white;
+    padding: 0.1rem 0.5rem;
+    border-radius: 2px;
+  }
+  .flow .note {
+    color: var(--muted);
+    font-size: 0.7rem;
+  }
+
+  /* ── Class card ── */
+  .class-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .class-card {
+    border: 2px solid var(--ink);
+    border-radius: 3px;
+    overflow: hidden;
+    background: white;
+  }
+  .class-card-header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.5rem 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .class-card-header .stereotype {
+    color: #a5b4fc;
+    font-weight: 400;
+    font-size: 0.65rem;
+  }
+  .class-card-body {
+    padding: 0.75rem;
+  }
+  .class-field {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    line-height: 1.8;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+  .class-field:last-child { border: none; margin: 0; padding: 0; }
+  .class-field .vis { color: var(--accent); font-weight: 700; }
+  .class-field .type { color: var(--accent2); }
+  .class-note {
+    font-size: 0.72rem;
+    color: var(--muted);
+    background: var(--highlight);
+    padding: 0.35rem 0.5rem;
+    border-radius: 2px;
+    margin-top: 0.5rem;
+    font-style: italic;
+  }
+
+  /* ── Pattern explanation ── */
+  .pattern-row {
+    display: flex;
+    gap: 1rem;
+    margin: 0.75rem 0;
+    align-items: flex-start;
+  }
+  .pattern-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+  .pt-singleton { background: var(--tag-red-bg); color: var(--tag-red); }
+  .pt-strategy  { background: var(--tag-blue-bg); color: var(--tag-blue); }
+  .pt-observer  { background: var(--tag-green-bg); color: var(--tag-green); }
+  .pt-state     { background: var(--tag-amber-bg); color: var(--tag-amber); }
+  .pattern-desc { font-size: 0.88rem; line-height: 1.6; }
+
+  /* ── Code snippet ── */
+  .code-block {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 1.25rem 1.5rem;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.75;
+    margin: 1rem 0;
+    overflow-x: auto;
+    border-left: 3px solid var(--accent);
+  }
+  .code-block .kw  { color: #cba6f7; }
+  .code-block .cls { color: #89b4fa; }
+  .code-block .fn  { color: #a6e3a1; }
+  .code-block .str { color: #a6e3a1; }
+  .code-block .cm  { color: #6c7086; }
+  .code-block .num { color: #fab387; }
+  .code-block .ann { color: #f38ba8; }
+
+  /* ── Interview tips ── */
+  .tip-list {
+    list-style: none;
+    margin: 0.5rem 0;
+  }
+  .tip-list li {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px dashed var(--rule);
+    font-size: 0.88rem;
+    line-height: 1.55;
+  }
+  .tip-list li:last-child { border: none; }
+  .tip-icon {
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    margin-top: 0.05rem;
+  }
+
+  /* ── Two-column layout ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Divider ── */
+  hr {
+    border: none;
+    border-top: 2px dashed var(--rule);
+    margin: 2rem 0;
+  }
+
+  /* ── Timeline / steps ── */
+  .steps {
+    position: relative;
+    padding-left: 2rem;
+    margin: 1rem 0;
+  }
+  .steps::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--rule);
+  }
+  .step {
+    position: relative;
+    margin-bottom: 1.25rem;
+  }
+  .step::before {
+    content: '';
+    position: absolute;
+    left: -26px;
+    top: 4px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--paper);
+    outline: 2px solid var(--accent);
+  }
+  .step-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.2rem;
+  }
+  .step-body {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+
+  /* ── Enum box ── */
+  .enum-box {
+    background: #f0f0f5;
+    border: 1.5px solid #c7c7d9;
+    border-radius: 3px;
+    padding: 0.75rem 1rem;
+    margin: 0.75rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+  }
+  .enum-box .enum-title { color: var(--accent); font-weight: 700; margin-bottom: 0.35rem; }
+  .enum-box .enum-vals { color: var(--accent2); }
+
+  /* ── Footer ── */
+  .footer {
+    background: var(--ink);
+    color: rgba(255,255,255,0.4);
+    padding: 1.25rem 3rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 1.25rem 0 0.5rem;
+  }
+  h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin: 1rem 0 0.35rem;
+  }
+
+  strong { font-weight: 700; }
+  em { font-style: italic; color: var(--muted); }
+
+  .inline-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78em;
+    background: #f0eee9;
+    padding: 0.1em 0.4em;
+    border-radius: 2px;
+    border: 1px solid var(--rule);
+  }
+</style>
+</head>
+<body>
+
+<div class="notebook">
+
+  <!-- Binding holes -->
+  <div class="binding">
+    <div class="hole"></div><div class="hole"></div><div class="hole"></div>
+    <div class="hole"></div><div class="hole"></div><div class="hole"></div>
+    <div class="hole"></div><div class="hole"></div><div class="hole"></div>
+    <div class="hole"></div><div class="hole"></div><div class="hole"></div>
+    <div class="hole"></div><div class="hole"></div><div class="hole"></div>
+    <div class="hole"></div><div class="hole"></div><div class="hole"></div>
+    <div class="hole"></div><div class="hole"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- COVER -->
+    <div class="cover">
+      <div class="cover-label">LLD Interview Notes · Problem #1</div>
+      <h1>Elevator<br>System Design</h1>
+      <p class="cover-sub">Low Level Design · Java · Design Patterns</p>
+      <div class="cover-badges">
+        <span class="badge badge-red">Singleton</span>
+        <span class="badge badge-outline">Strategy</span>
+        <span class="badge badge-outline">Observer</span>
+        <span class="badge badge-outline">State</span>
+      </div>
+    </div>
+
+    <!-- SECTION 1: THE GOLDEN RULE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">0</div>
+        <div>
+          <div class="section-title">The Golden Rule of LLD Interviews</div>
+          <div class="section-sub">Before you write a single class</div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>START THINKING FROM THE CLIENT'S PERSPECTIVE.</strong><br>
+        Don't jump into classes. First ask: <em>what does the user actually do?</em> Trace a user story end-to-end. Every class you design should exist because a user action demanded it — not because it seemed like a good idea.
+      </div>
+
+      <p>The user flow for an elevator is simple and concrete. Use it to anchor yourself:</p>
+
+      <div class="flow">
+        <span class="node">User at floor 3</span>
+        <span class="arrow"> → </span> presses UP/DOWN button (outside elevator)
+        <span class="arrow"> → </span> <span class="node-blue">External Request</span>
+        <span class="arrow"> → </span><br>
+        System decides <em>which</em> elevator opens
+        <span class="arrow"> → </span> <span class="node-blue">Elevator Selection</span>
+        <span class="arrow"> → </span><br>
+        User enters, presses floor 7
+        <span class="arrow"> → </span> <span class="node-blue">Internal Request</span>
+        <span class="arrow"> → </span><br>
+        Elevator moves to floor 7
+        <span class="arrow"> → </span> <span class="node">Done</span>
+      </div>
+
+      <div class="callout-blue callout">
+        <strong>Two types of requests exist.</strong> This is the core split that drives the whole design.<br>
+        • <strong>External Request</strong>: From <em>outside</em> the elevator — user presses UP or DOWN on a floor. Needs: (direction, src floor)<br>
+        • <strong>Internal Request</strong>: From <em>inside</em> the elevator — user presses a destination floor button. Needs: (dest floor, elevator ID)
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 2: REQUIREMENTS GATHERING -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">I</div>
+        <div>
+          <div class="section-title">Requirements Gathering</div>
+          <div class="section-sub">Ask these questions before designing</div>
+        </div>
+      </div>
+
+      <p>In an interview, <strong>always clarify requirements first</strong>. Here is what to ask/confirm for an elevator system:</p>
+
+      <ul class="req-list">
+        <li><span class="req-num">R1</span> <strong>Multiple elevators</strong> — How many? Are they identical or different types?</li>
+        <li><span class="req-num">R2</span> <strong>Who are the customers?</strong> — Is this a building system, a simulation, or an API?</li>
+        <li><span class="req-num">R3</span> <strong>Elevator system scope</strong> — Is it just the controller logic, or also hardware simulation?</li>
+        <li><span class="req-num">R4</span> <strong>Kinds of elevators</strong> — Passenger, Service, Private (VIP)? These may differ in behavior.</li>
+        <li><span class="req-num">R5</span> <strong>Capacity</strong> — Weight or person limit?</li>
+        <li><span class="req-num">R6</span> <strong>Range of floors</strong> — Basement? Penthouse? Zone restrictions?</li>
+        <li><span class="req-num">R7</span> <strong>Algorithm of movement</strong> — Which floor scheduling algorithm? LOOK, SCAN, FCFS, Shortest Seek Time? Should it be changeable?</li>
+        <li><span class="req-num">R8</span> <strong>Status</strong> — Does the system need to track IDLE, MOVING, NOT_WORKING states?</li>
+      </ul>
+
+      <div class="callout-yellow callout">
+        <strong>Instructor note from your class:</strong> Things like fan, light, buttons inside the elevator are "irrelevant in this scope." Know what is in-scope and out-of-scope. For this problem: focus on the <em>movement logic</em> and <em>request routing</em>, not internal hardware components.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 3: START FROM MAIN() -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">II</div>
+        <div>
+          <div class="section-title">Start from <span style="font-family: 'JetBrains Mono'; font-size:1.1rem;">main()</span></div>
+          <div class="section-sub">Your entry point reveals your top-level design</div>
+        </div>
+      </div>
+
+      <p>A powerful LLD trick: <strong>write what your main() would look like</strong>. This forces you to think about the public API of your system before designing internals.</p>
+
+      <div class="code-block">
+<span class="kw">public static void</span> <span class="fn">main</span>(<span class="cls">String</span>[] args) {
+  <span class="cm">// 1. Get the singleton instance of ElevatorSystem</span>
+  <span class="cls">ElevatorSystem</span> system = <span class="cls">ElevatorSystem</span>.<span class="fn">getElevatorSystem</span>();
+
+  <span class="cm">// 2. Initialize: how many floors, how many elevators</span>
+  system.<span class="fn">initialiseElevatorSystem</span>(<span class="num">10</span>, <span class="num">3</span>);
+
+  <span class="cm">// 3. Set the algorithm (elevator selection strategy)</span>
+  system.<span class="fn">setElevatorSelectionStrategy</span>(<span class="kw">new</span> <span class="cls">OddEvenElevatorSelStrategy</span>());
+
+  <span class="cm">// 4. External request: someone on floor 3 wants to go UP</span>
+  system.<span class="fn">sendExternalRequest</span>(<span class="cls">ELEVATOR_DIRECTION</span>.UP, <span class="num">3</span>);
+
+  <span class="cm">// 5. Internal request: once inside elevator #2, go to floor 7</span>
+  system.<span class="fn">sendInternalRequest</span>(<span class="num">7</span>, <span class="num">2</span>);
+}
+      </div>
+
+      <div class="callout-green callout">
+        <strong>What main() tells you:</strong> You now know <em>ElevatorSystem</em> is a Singleton. You know it has an initialise method, a setAlgo method, and two send-request methods. You've designed the top-level API without touching any internal class yet.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 4: CLASS DESIGN -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">III</div>
+        <div>
+          <div class="section-title">Class-by-Class Breakdown</div>
+          <div class="section-sub">What each class owns and why it exists</div>
+        </div>
+      </div>
+
+      <div class="callout-blue callout">
+        <strong>Key question to ask yourself:</strong> "Where should this data live? Who is responsible for this action?" Every class needs a <em>single clear reason to exist</em>.
+      </div>
+
+      <!-- ElevatorSystem -->
+      <h3>① ElevatorSystem <span style="font-family:Lato;font-size:0.8rem;font-weight:300;color:var(--muted)">— the façade / entry point</span></h3>
+      <div class="class-grid" style="grid-template-columns: 1fr;">
+        <div class="class-card">
+          <div class="class-card-header">ElevatorSystem</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="vis">-</span> <span class="type">ElevatorSystem*</span> elevatorSystemInstance &nbsp;<em style="font-size:0.65rem">(static singleton)</em></div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">ExternalRequestsProcessor*</span> extReqProcessor</div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">InternalRequestsProcessor*</span> intReqProcessor</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">getElevatorSystem()</span> : ElevatorSystem*</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">initialiseElevatorSystem</span>(noOfFloors, noOfElevators)</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">setElevatorSelectionStrategy</span>(strategy)</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">sendExternalRequest</span>(direction, srcFloor)</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">sendInternalRequest</span>(destFloor, elevatorId)</div>
+            <div class="class-note">💡 Singleton — only one ElevatorSystem exists in the building. Client talks ONLY to this class. It delegates to processors.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ElevatorMgr -->
+      <h3>② ElevatorMgr <span style="font-family:Lato;font-size:0.8rem;font-weight:300;color:var(--muted)">— knows all elevators</span></h3>
+      <p style="font-size:0.88rem; margin-bottom:0.5rem;">This solves the question your notes ask: <em>"Where are all the elevators supposed to be kept?"</em> Answer: NOT in ElevatorSystem directly. ElevatorMgr holds them.</p>
+      <div class="class-grid" style="grid-template-columns: 1fr;">
+        <div class="class-card">
+          <div class="class-card-header">ElevatorMgr</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="vis">-</span> <span class="type">ElevatorMgr*</span> elevatorMgrInstance &nbsp;<em style="font-size:0.65rem">(singleton)</em></div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">unordered_map&lt;int, Elevator*&gt;</span> elevators &nbsp;<em style="font-size:0.65rem">(Map&lt;ID, Elevator&gt;)</em></div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">getElevatorMgr()</span> : ElevatorMgr*</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">initialiseElevators</span>(noOfElevators)</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">getElevator</span>(id) : Elevator</div>
+            <div class="class-note">💡 ElevatorSystem has an ElevatorMgr. ElevatorMgr has a Map&lt;ID, Elevator&gt;. Elevators are added to this map when initialiseElevators() is called.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Request Processors -->
+      <h3>③ Request Processors <span style="font-family:Lato;font-size:0.8rem;font-weight:300;color:var(--muted)">— separate external vs internal concerns</span></h3>
+      <div class="class-grid">
+        <div class="class-card">
+          <div class="class-card-header">ExternalRequestsProcessor</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="vis">-</span> <span class="type">ElevatorSelectionStrategy*</span> elevatorSelectionStrategy</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">processExternalRequest</span>(ExternalRequest* req)</div>
+            <div class="class-note">💡 Receives a (direction, srcFloor). Uses its strategy to pick WHICH elevator. Delegates movement to that elevator.</div>
+          </div>
+        </div>
+        <div class="class-card">
+          <div class="class-card-header">InternalRequestsProcessor</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="vis">+</span> <span class="fn">processInternalRequest</span>(InternalRequest* req)</div>
+            <div class="class-note">💡 Receives a (destFloor, elevatorId). Finds that exact elevator, tells it to go to destFloor.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Request objects -->
+      <h3>④ Request Objects <span style="font-family:Lato;font-size:0.8rem;font-weight:300;color:var(--muted)">— dumb data containers</span></h3>
+      <div class="class-grid">
+        <div class="class-card">
+          <div class="class-card-header">ExternalRequest</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="vis">-</span> <span class="type">ELEVATOR_DIRECTION</span> directionToGo</div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">int</span> srcFloor</div>
+          </div>
+        </div>
+        <div class="class-card">
+          <div class="class-card-header">InternalRequest</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="vis">-</span> <span class="type">int</span> destFloor</div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">int</span> srcElevatorId</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Elevator -->
+      <h3>⑤ Elevator <span style="font-family:Lato;font-size:0.8rem;font-weight:300;color:var(--muted)">— the actual elevator entity</span></h3>
+      <div class="class-grid" style="grid-template-columns: 1fr;">
+        <div class="class-card">
+          <div class="class-card-header">Elevator</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="vis">-</span> <span class="type">int</span> elevatorId</div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">int</span> capacity</div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">ElevatorController*</span> controller</div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">vector&lt;InternalDisplay*&gt;</span> displays &nbsp;<em style="font-size:0.65rem">(Observer pattern)</em></div>
+            <div class="class-note">💡 Elevator does NOT decide where to go. It delegates that to ElevatorController. Elevator = the physical box. Controller = the brain.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ElevatorController -->
+      <h3>⑥ ElevatorController + ElevatorState <span style="font-family:Lato;font-size:0.8rem;font-weight:300;color:var(--muted)">— the movement brain</span></h3>
+      <div class="class-grid">
+        <div class="class-card">
+          <div class="class-card-header">ElevatorController</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="vis">-</span> <span class="type">ElevatorControlStrategy*</span> controlStrategy</div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">ElevatorCurrState*</span> state</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">moveElevatorToFloor</span>(int floorNum)</div>
+            <div class="class-note">💡 One controller per elevator. It is responsible for the elevator's movement. Tells hardware (h/w) to move.</div>
+          </div>
+        </div>
+        <div class="class-card">
+          <div class="class-card-header">ElevatorState</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="vis">-</span> <span class="type">ELEVATOR_DIRECTION</span> currDirection</div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">ELEVATOR_STATUS</span> currStatus</div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">int</span> currFloor</div>
+            <div class="class-note">💡 A snapshot of where the elevator is and what it's doing right now. Used by strategies to make decisions.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 5: ENUMS -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">IV</div>
+        <div>
+          <div class="section-title">ENUMs — Use Them Always in LLD</div>
+          <div class="section-sub">Your notes say: "In LLD, use ENUMS"</div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>Never use raw strings or ints for fixed states.</strong> Always model them as enums. This is a green flag in interviews — it shows you think about type safety.
+      </div>
+
+      <div class="two-col">
+        <div class="enum-box">
+          <div class="enum-title">ELEVATOR_DIRECTION</div>
+          <div class="enum-vals">UP, DOWN</div>
+        </div>
+        <div class="enum-box">
+          <div class="enum-title">ELEVATOR_STATUS</div>
+          <div class="enum-vals">IDLE, MOVING, NOT_WORKING</div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 6: DESIGN PATTERNS -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">V</div>
+        <div>
+          <div class="section-title">Design Patterns Used</div>
+          <div class="section-sub">Why each pattern fits naturally</div>
+        </div>
+      </div>
+
+      <div class="pattern-row">
+        <span class="pattern-tag pt-singleton">Singleton</span>
+        <div class="pattern-desc"><strong>ElevatorSystem</strong> and <strong>ElevatorMgr</strong> are both singletons. A building has exactly one elevator system. You don't want two instances accidentally creating duplicate state. Use a private constructor + static <span class="inline-code">getInstance()</span> method.</div>
+      </div>
+
+      <div class="pattern-row">
+        <span class="pattern-tag pt-strategy">Strategy</span>
+        <div class="pattern-desc">Used in TWO places: <br>① <strong>ElevatorSelectionStrategy</strong> — which elevator answers an external call? Options: OddEvenStrategy, ZoneStrategy. <br>② <strong>ElevatorControlStrategy</strong> — how does a selected elevator decide its next stop? Options: LOOK algo, SCAN algo, FCFS, Shortest Seek Time. Both can be <em>swapped at runtime</em> — "you can change it once a year, month, whenever."</div>
+      </div>
+
+      <div class="pattern-row">
+        <span class="pattern-tag pt-observer">Observer</span>
+        <div class="pattern-desc"><strong>Sensor</strong> observes elevators. When a floor change is detected via <span class="inline-code">detectFloor()</span>, it notifies registered displays. The <span class="inline-code">notifyElevators(floorNum)</span> method pushes the update. Displays are subscribers.</div>
+      </div>
+
+      <div class="pattern-row">
+        <span class="pattern-tag pt-state">State</span>
+        <div class="pattern-desc"><strong>ElevatorState</strong> captures the current condition of the elevator (direction, status, floor). The controller reads this state when deciding movement. Encapsulating state separately makes it easy to extend without changing the elevator itself.</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 7: STRATEGY DEEP DIVE -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">VI</div>
+        <div>
+          <div class="section-title">The Two Strategy Layers Explained</div>
+          <div class="section-sub">The most important design decision in this system</div>
+        </div>
+      </div>
+
+      <h3>Layer 1: Which elevator should respond? (ElevatorSelectionStrategy)</h3>
+      <p>When someone presses UP/DOWN on floor 3, <em>which</em> elevator should open? The <span class="inline-code">ExternalRequestsProcessor</span> holds a strategy for this. Examples:</p>
+      <div class="class-grid">
+        <div class="class-card">
+          <div class="class-card-header">OddEvenElevatorSelStrategy</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="fn">selectElevator</span>(ExternalRequest) : int</div>
+            <div class="class-note">If src floor is odd → pick odd-numbered elevator; even → even elevator.</div>
+          </div>
+        </div>
+        <div class="class-card">
+          <div class="class-card-header">ZoneElevatorSelStrategy</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="fn">selectElevator</span>(ExternalRequest) : int</div>
+            <div class="class-note">Floors 1–5 → elevator zone A, Floors 6–10 → elevator zone B.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Layer 2: What floor should it stop at next? (ElevatorControlStrategy)</h3>
+      <p>Once an elevator is moving, it needs to decide: <em>what's the next floor to stop at?</em> The <span class="inline-code">ElevatorController</span> holds this strategy. Examples:</p>
+      <div class="class-grid">
+        <div class="class-card">
+          <div class="class-card-header">LookAlgoElevatorControlStrategy</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="fn">determineNextStop</span>(floorNum) : int</div>
+            <div class="class-note">Goes in one direction until no more requests, then reverses (like a look-ahead scan).</div>
+          </div>
+        </div>
+        <div class="class-card">
+          <div class="class-card-header">ScanAlgorithmECS</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="fn">determineNextStop</span>(floorNum) : int</div>
+            <div class="class-note">Goes end-to-end like a disk scan. Services requests in order of direction.</div>
+          </div>
+        </div>
+        <div class="class-card">
+          <div class="class-card-header">ShortestSeekTimeECS</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="fn">determineNextStop</span>(floorNum) : int</div>
+            <div class="class-note">Goes to whichever pending floor is closest to current floor.</div>
+          </div>
+        </div>
+        <div class="class-card">
+          <div class="class-card-header">FirstComeFirstServeECS</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="fn">determineNextStop</span>(floorNum) : int</div>
+            <div class="class-note">Processes requests in the order they arrived. Simple queue logic.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 8: OBJECT HIERARCHY -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">VII</div>
+        <div>
+          <div class="section-title">Elevator Inheritance</div>
+          <div class="section-sub">From your note: "Pvt. Elevator (factory can be overkill)"</div>
+        </div>
+      </div>
+
+      <p>Elevators come in different kinds. Model this with inheritance:</p>
+
+      <div class="flow">
+        <span class="node">Elevator</span> <span class="arrow">(abstract base)</span><br>
+        &nbsp;&nbsp;&nbsp;↑<br>
+        ┌──────────────────────────┐<br>
+        <span class="node-blue">PassengerElevator</span> &nbsp; <span class="node-blue">ServiceElevator</span> &nbsp; <span class="node-blue">PrivateElevator</span>
+      </div>
+
+      <div class="callout-yellow callout">
+        <strong>Factory pattern for creating elevators?</strong> Your notes flag this as "overkill" for this scope. Unless the interviewer specifically asks for a Factory, keep it simple — just instantiate the right subclass in <span class="inline-code">initialiseElevators()</span>. Don't over-engineer.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 9: END-TO-END FLOW -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">VIII</div>
+        <div>
+          <div class="section-title">End-to-End Request Flow</div>
+          <div class="section-sub">Trace a call from button press to elevator arrival</div>
+        </div>
+      </div>
+
+      <h3>External Request (button pressed outside elevator)</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-title">User Action</div>
+          <div class="step-body">User on floor 3 presses UP. Creates: <span class="inline-code">ExternalRequest(UP, srcFloor=3)</span></div>
+        </div>
+        <div class="step">
+          <div class="step-title">ElevatorSystem.sendExternalRequest()</div>
+          <div class="step-body">Delegates to <span class="inline-code">ExternalRequestsProcessor.processExternalRequest(req)</span></div>
+        </div>
+        <div class="step">
+          <div class="step-title">Elevator Selection</div>
+          <div class="step-body">ERP calls <span class="inline-code">elevatorSelectionStrategy.selectElevator(req)</span> → returns elevator ID (e.g., 2)</div>
+        </div>
+        <div class="step">
+          <div class="step-title">Get Elevator</div>
+          <div class="step-body">ERP asks <span class="inline-code">ElevatorMgr.getElevator(2)</span> → gets Elevator #2 object</div>
+        </div>
+        <div class="step">
+          <div class="step-title">Move</div>
+          <div class="step-body">Calls <span class="inline-code">elevator.controller.moveElevatorToFloor(3)</span>. Controller uses its <span class="inline-code">ElevatorControlStrategy</span> to decide movement steps.</div>
+        </div>
+      </div>
+
+      <h3>Internal Request (button pressed inside elevator)</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-title">User Action</div>
+          <div class="step-body">Inside elevator #2, user presses floor 7. Creates: <span class="inline-code">InternalRequest(destFloor=7, elevatorId=2)</span></div>
+        </div>
+        <div class="step">
+          <div class="step-title">ElevatorSystem.sendInternalRequest()</div>
+          <div class="step-body">Delegates to <span class="inline-code">InternalRequestsProcessor.processInternalRequest(req)</span></div>
+        </div>
+        <div class="step">
+          <div class="step-title">Get Elevator + Move</div>
+          <div class="step-body">IRP gets elevator #2 from ElevatorMgr, then calls <span class="inline-code">controller.moveElevatorToFloor(7)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 10: SENSOR -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">IX</div>
+        <div>
+          <div class="section-title">Sensor (Observer Pattern)</div>
+          <div class="section-sub">Detecting floor changes and notifying displays</div>
+        </div>
+      </div>
+
+      <div class="class-grid" style="grid-template-columns: 1fr;">
+        <div class="class-card">
+          <div class="class-card-header">Sensor</div>
+          <div class="class-card-body">
+            <div class="class-field"><span class="vis">-</span> <span class="type">vector&lt;Elevator*&gt;</span> elevators</div>
+            <div class="class-field"><span class="vis">-</span> <span class="type">int</span> floorNum</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">detectFloor</span>()</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">addElevator</span>(Elevator*)</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">removeElevator</span>(Elevator*)</div>
+            <div class="class-field"><span class="vis">+</span> <span class="fn">notifyElevators</span>(int floorNum)</div>
+            <div class="class-note">💡 Sensor acts as the Subject in Observer pattern. It detects which floor the elevator is on and notifies all registered observers (displays).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 11: INTERVIEW TIPS -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">X</div>
+        <div>
+          <div class="section-title">Interview Execution Tips</div>
+          <div class="section-sub">How to present this in a real interview</div>
+        </div>
+      </div>
+
+      <ul class="tip-list">
+        <li>
+          <span class="tip-icon">🎯</span>
+          <div><strong>Always start with requirements.</strong> Spend 2–3 minutes asking clarifying questions. Interviewers reward this. It shows you don't just blindly code.</div>
+        </li>
+        <li>
+          <span class="tip-icon">🧭</span>
+          <div><strong>Draw the user flow first.</strong> Before any class, say: "A user presses UP on floor 3. Let me trace what happens." This grounds your design in reality.</div>
+        </li>
+        <li>
+          <span class="tip-icon">📋</span>
+          <div><strong>Write a fake main() early.</strong> This is a power move. It forces you to define your public API before internals, and shows you think top-down.</div>
+        </li>
+        <li>
+          <span class="tip-icon">🔀</span>
+          <div><strong>Name your design patterns out loud.</strong> "I'm using Strategy here because the algorithm needs to be swappable at runtime." Showing pattern awareness is a huge green flag.</div>
+        </li>
+        <li>
+          <span class="tip-icon">⚖️</span>
+          <div><strong>Know when NOT to add a pattern.</strong> "Factory could work here, but for this scope it's overkill." Being deliberate about simplicity shows seniority.</div>
+        </li>
+        <li>
+          <span class="tip-icon">🏷️</span>
+          <div><strong>Use ENUMs for all fixed states.</strong> Direction (UP/DOWN), Status (IDLE, MOVING, NOT_WORKING). Never use magic strings or ints.</div>
+        </li>
+        <li>
+          <span class="tip-icon">📦</span>
+          <div><strong>Separate concerns clearly.</strong> Selection strategy (which elevator) vs Control strategy (which floor next) are different responsibilities. Don't merge them.</div>
+        </li>
+        <li>
+          <span class="tip-icon">🔑</span>
+          <div><strong>Singleton justification.</strong> "ElevatorSystem is a singleton because there is only one building-level elevator system. Two instances would cause inconsistent state." Always explain <em>why</em>, not just <em>what</em>.</div>
+        </li>
+      </ul>
+    </div>
+
+    <hr>
+
+    <!-- SECTION 12: CHEAT SHEET -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">★</div>
+        <div>
+          <div class="section-title">Quick Reference Cheat Sheet</div>
+          <div class="section-sub">Scan this in the last 60 seconds before your interview</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <h4>Classes to Remember</h4>
+          <ul class="req-list">
+            <li><span class="req-num">1</span> ElevatorSystem (Singleton)</li>
+            <li><span class="req-num">2</span> ElevatorMgr (Singleton + Map)</li>
+            <li><span class="req-num">3</span> ExternalRequestsProcessor</li>
+            <li><span class="req-num">4</span> InternalRequestsProcessor</li>
+            <li><span class="req-num">5</span> ExternalRequest / InternalRequest</li>
+            <li><span class="req-num">6</span> Elevator (+ subclasses)</li>
+            <li><span class="req-num">7</span> ElevatorController</li>
+            <li><span class="req-num">8</span> ElevatorState</li>
+            <li><span class="req-num">9</span> ElevatorSelectionStrategy (interface)</li>
+            <li><span class="req-num">10</span> ElevatorControlStrategy (interface)</li>
+            <li><span class="req-num">11</span> Sensor (Observer)</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Patterns Used</h4>
+          <ul class="req-list">
+            <li><span class="req-num" style="background:#fee2e2;color:#991b1b">SIN</span> ElevatorSystem, ElevatorMgr</li>
+            <li><span class="req-num" style="background:#dbeafe;color:#1e40af">STR</span> ElevatorSelectionStrategy<br><em style="font-size:0.75rem; margin-left:0">OddEven, Zone</em></li>
+            <li><span class="req-num" style="background:#dbeafe;color:#1e40af">STR</span> ElevatorControlStrategy<br><em style="font-size:0.75rem; margin-left:0">LOOK, SCAN, SST, FCFS</em></li>
+            <li><span class="req-num" style="background:#dcfce7;color:#166534">OBS</span> Sensor → InternalDisplay</li>
+            <li><span class="req-num" style="background:#fef3c7;color:#92400e">STA</span> ElevatorState</li>
+          </ul>
+          <h4 style="margin-top:1rem;">Key ENUMs</h4>
+          <ul class="req-list">
+            <li><span class="req-num">DIR</span> UP, DOWN</li>
+            <li><span class="req-num">STA</span> IDLE, MOVING, NOT_WORKING</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout" style="margin-top:1.5rem;">
+        <strong>The 5-step interview playbook:</strong><br>
+        1. Clarify requirements (2 min) → 2. Trace user flow (1 min) → 3. Write fake main() (2 min) → 4. Identify classes + patterns (5 min) → 5. Code the most important classes (remaining time)
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <span>LLD INTERVIEW NOTES · ELEVATOR SYSTEM · JAVA</span>
+      <span>Based on instructor diagram + your handwritten notes</span>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /notebook -->
+
+</body>
+</html>
