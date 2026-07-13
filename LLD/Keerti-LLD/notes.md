@@ -1969,6 +1969,22 @@ Add new Device → no need to touch Remotes
 **Intuition:**
 The Composite pattern lets you compose objects into tree structures to represent part-whole hierarchies. It allows clients to treat individual objects and compositions of objects uniformly.
 
+
+```java
+                   <<abstract>>
+                EmployeeComponent
+        + displayInfo()
+        + calculateSalary()
+                     ▲
+          ┌──────────┼──────────┐
+          │          │          │
+      Employee    Department    Team
+                     ◇             ◇
+                     │             │
+                     └──────► EmployeeComponent (0..*)
+
+```
+
 **Flow of Implementation:**
 
 - **Component (`EmployeeComponent`)**: The abstract base class declaring common operations (`displayInfo()`, `calculateSalary()`) for both simple and complex objects.
