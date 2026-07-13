@@ -800,56 +800,15 @@ If a direct call fails, you have to manually re-invoke it. There's no built-in w
 
 It encapsulates a request as an **object**, separating the sender from the receiver.
 
-```java
-// The Command interface
-interface Command {
-    void execute();
-    void undo();
-}
-
-// Concrete Command
-class PlaceOrderCommand implements Command {
-    private OrderService orderService;
-    private Order order;
-
-    public PlaceOrderCommand(OrderService orderService, Order order) {
-        this.orderService = orderService;
-        this.order = order;
-    }
-
-    public void execute() {
-        orderService.placeOrder(order);
-    }
-
-    public void undo() {
-        orderService.cancelOrder(order);
-    }
-}
-
-// Sender - knows nothing about OrderService
-class OrderController {
-    private Command command;
-
-    void setCommand(Command command) {
-        this.command = command;
-    }
-
-    void click() {
-        command.execute(); // decoupled!
-    }
-}
-```
-
-
 ![alt text](image-12.png)
 
 **Flow of Implementation:**
 
 - **Command Interface (`ActionListenerCommand`)**: Declares a single `execute()` method.
-- **Receiver (`Document`)**: Contains the actual business logic for operations (`open()`, `save()`).
+- **Receiver (`Document`)**: Contains the actual business logic for operations (`open()`, `save()`). === SERVICE CLASS
 - **Concrete Commands (`ActionOpen`, `ActionSave`)**: Implement the Command interface and maintain a reference to the Receiver, mapping the `execute()` call to the Receiver's actual method.
-- **Invoker (`MenuOptions`)**: Holds a list of commands and triggers them by calling `execute()`.
-- **Client (`DocumentDemo`)**: Assembles the commands and passes them to the Invoker.
+- **Invoker (`MenuOptions`)**: Holds a list of commands and triggers them by calling `execute()`. === CONTROLLER
+- **Client (`DocumentDemo`)**: Assembles the commands and passes them to the Invoker. == CONTROLLER
 
 **Code:**
 
@@ -928,6 +887,47 @@ public class DocumentDemo {
         menu.addCommand(clickSave);
 
         menu.executeCommands();
+    }
+}
+```
+
+
+```java
+// The Command interface
+interface Command {
+    void execute();
+    void undo();
+}
+
+// Concrete Command
+class PlaceOrderCommand implements Command {
+    private OrderService orderService;
+    private Order order;
+
+    public PlaceOrderCommand(OrderService orderService, Order order) {
+        this.orderService = orderService;
+        this.order = order;
+    }
+
+    public void execute() {
+        orderService.placeOrder(order);
+    }
+
+    public void undo() {
+        orderService.cancelOrder(order);
+    }
+}
+
+// Sender - knows nothing about OrderService
+class OrderController {
+    private Command command;
+
+    void setCommand(Command command) {
+        this.command = command;
+    }
+
+    void click() {
+        command.execute(); // decoupled!
     }
 }
 ```
