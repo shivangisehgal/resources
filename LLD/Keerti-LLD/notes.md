@@ -3,11 +3,30 @@ OOPS
 ## Design principles: SOLID, (DRY, KISS)
 
 ## UML Diagrams
+
+|Relationship      |UML Arrow                           |One-phrase meaning                                           |
+|------------------|------------------------------------|-------------------------------------------------------------|
+|**Dependency**    |`- - - >` dashed, open arrow        |“I *use* you briefly” — parameter/local var, not stored      |
+|**Association**   |`———>` solid, open arrow            |“I *know about* you” — stored as a field, no ownership       |
+|**Aggregation**   |`——◇` solid, hollow diamond at owner|“I *have* you, but you can live without me” (Team–Player)    |
+|**Composition**   |`——◆` solid, filled diamond at owner|“I *own* you, you die when I die” (Car–Engine, House–Room)   |
+|**Generalization**|`——▷` solid, hollow triangle        |“I *am a* type of you” — class extends class                 |
+|**Realization**   |`- - -▷` dashed, hollow triangle    |“I *promise to behave like* you” — class implements interface|
+
+Dependency  --->  Association  --->  Aggregation  --->  Composition  --->  Realization/Generalization
+ (uses)          (has a link)        (has-a,          (has-a,            (structural,
+                                      weak whole-part,  strong whole-part, not "has-a" at all)
+                                      parts survive)    parts die with whole)
+1.	Dependency vs Association → Is it a field (stored, exists across method calls)? → Association. Is it only a parameter/local variable (exists for one method call only)? → Dependency.
+	2.	Association vs Aggregation vs Composition → Is there no ownership, just a link? → Association. Is there whole-part ownership but the part survives without the whole? → Aggregation. Does the part get destroyed when the whole is destroyed? → Composition.
+	3.	Generalization vs Realization → Is the parent a class (concrete or abstract, may have implementation)? → Generalization. Is the parent an interface (pure contract, no implementation)? → Realization.
+
+
 - For agg vs composition, think what if i delete the parent class, does it make sense for the other to exist?
 
 - [Class Diagram Cheatsheet](https://www.geeksforgeeks.org/system-design/unified-modeling-language-uml-class-diagrams/)
 
-- ![alt text](image-1.png)
+
 
 ## Design patterns:
 
