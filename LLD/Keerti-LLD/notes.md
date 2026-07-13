@@ -206,6 +206,7 @@ All factories implement all these methods to create families of objects of a spe
 It is essentially a "factory of factories."
 
 In UI development, for example, it ensures that Windows buttons are used with Windows textboxes, preventing UI element mismatch.
+Enterprise vs Consumer notification factories create compatible EmailSender, SMSSender, PushSender.
 
 ![alt text](image.png)
 
