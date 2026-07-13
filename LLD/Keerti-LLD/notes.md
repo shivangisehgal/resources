@@ -13,13 +13,16 @@ OOPS
 |**Generalization**|`——▷` solid, hollow triangle        |“I *am a* type of you” — class extends class                 |
 |**Realization**   |`- - -▷` dashed, hollow triangle    |“I *promise to behave like* you” — class implements interface|
 
+```java
 Dependency  --->  Association  --->  Aggregation  --->  Composition  --->  Realization/Generalization
  (uses)          (has a link)        (has-a,          (has-a,            (structural,
                                       weak whole-part,  strong whole-part, not "has-a" at all)
                                       parts survive)    parts die with whole)
-1.	Dependency vs Association → Is it a field (stored, exists across method calls)? → Association. Is it only a parameter/local variable (exists for one method call only)? → Dependency.
-	2.	Association vs Aggregation vs Composition → Is there no ownership, just a link? → Association. Is there whole-part ownership but the part survives without the whole? → Aggregation. Does the part get destroyed when the whole is destroyed? → Composition.
-	3.	Generalization vs Realization → Is the parent a class (concrete or abstract, may have implementation)? → Generalization. Is the parent an interface (pure contract, no implementation)? → Realization.
+```
+
+1.	**Dependency vs Association** → Is it a field (stored, exists across method calls)? → Association. Is it only a parameter/local variable (exists for one method call only)? → Dependency.
+2.	**Association vs Aggregation vs Composition** → Is there no ownership, just a link? → Association. Is there whole-part ownership but the part survives without the whole? → Aggregation. Does the part get destroyed when the whole is destroyed? → Composition.
+3.	**Generalization vs Realization** → Is the parent a class (concrete or abstract, may have implementation)? → Generalization. Is the parent an interface (pure contract, no implementation)? → Realization.
 
 
 - For agg vs composition, think what if i delete the parent class, does it make sense for the other to exist?
@@ -61,6 +64,12 @@ Creational Design Patterns (6):
 ---
 
 ## PART 1: CREATIONAL DESIGN PATTERNS
+
+Need for Creational Design Patterns:
+
+Example: An e-commerce app creates PaymentGateway objects. Today it supports Stripe, tomorrow PayPal, and later Razorpay. If the code uses new StripePaymentGateway() everywhere, switching or adding gateways requires changes across the entire codebase.
+
+Creational design patterns centralize and abstract object creation, so the client depends on an interface rather than concrete classes. This makes the code flexible, loosely coupled, easier to extend, test, and maintain.
 
 ![alt text](image-9.png)
 ![alt text](image-10.png)
@@ -615,7 +624,11 @@ main
 
 ## Part 2: BEHAVIORAL DESIGN PATTERNS
 
-Behavioral design patterns are concerned with algorithms and the assignment of responsibilities & communication between objects.
+Behavioral design patterns are concerned with algorithms and the **assignment of responsibilities** & communication between objects.
+
+Example: In an e-commerce app, when an order is placed, multiple actions must happen—send confirmation email, update inventory, generate invoice, notify warehouse, and award loyalty points. If OrderService directly performs all these actions, it becomes tightly coupled and hard to extend.
+
+Behavioral design patterns define how objects communicate and share responsibilities, making **interactions loosely coupled**, easier to extend, test, and maintain without modifying existing code.
 
 ### 1. Chain of Responsibility Design Pattern
 
