@@ -33,7 +33,7 @@ Dependency  --->  Association  --->  Aggregation  --->  Composition  --->  Reali
 
 ## Design patterns:
 
-Behavioral Design Patterns (7):
+Behavioral Design Patterns (11):
 
 1. Chain of Responsibility
 2. Command
@@ -42,8 +42,12 @@ Behavioral Design Patterns (7):
 5. State
 6. Strategy
 7. Template
+8. Mediator
+9. Memento
+10. Visitor
+11. Interpreter
 
-Structural Design Patterns (6):
+Structural Design Patterns (7):
 
 8. Adapter
 9. Bridge
@@ -51,6 +55,7 @@ Structural Design Patterns (6):
 11. Decorator
 12. Facade
 13. Proxy
+14. Flyweight
 
 Creational Design Patterns (7):
 
@@ -805,6 +810,8 @@ The Chain of Responsibility pattern allows an object to send a request to a chai
 
 Each handler in the chain either processes the request or passes it to the next handler in line.
 
+_The Risk of Broken Chains:_ A major caveat is that a request is **not guaranteed** to be handled. If the chain is misconfigured, or a request reaches the end without matching a condition, it drops silently. Always ensure a fallback / default handler exists at the end of the chain.
+
 ![alt text](image-13.png)
 
 **Flow of Implementation:**
@@ -1113,6 +1120,11 @@ class OrderController {
 **Intuition:**
 The Iterator pattern lets you traverse the elements of a collection without exposing its underlying representation (list, stack, tree, etc.).
 
+_Internal vs. External Iterators:_
+
+- **External Iterators (Active):** The client controls iteration by explicitly calling `next()` (like the example below). More flexible.
+- **Internal Iterators (Passive):** The collection handles iteration. The client passes an operation (lambda/callback), and the iterator applies it to every element (e.g. `list.forEach(item -> ...)` in Java).
+
 **Flow of Implementation:**
 
 - **Iterator Interface (`Iterator`)**: Declares traversal methods (`first()`, `next()`, `hasNext()`).
@@ -1216,6 +1228,13 @@ public class AmazonInventory {
 The Observer pattern establishes a one-to-many subscription mechanism. W
 
 When an object (the subject) changes its state, all its registered dependents (observers) are notified automatically.
+
+_Push vs. Pull Models:_
+
+- **Push Model:** The Subject sends the updated data directly to Observers as an argument in `update(data)`. Best when observers need the same data.
+- **Pull Model:** The Subject only notifies that a change happened via `update()`, and Observers call getters on the Subject to pull the specific state they care about. Better when observers need different slices of data.
+
+_The Lapsed Listener Problem (Memory Leak):_ If you forget to `detach()` an observer, the Subject holds a strong reference forever. The GC never destroys the observer → memory leak. Always unregister observers when they are destroyed.
 
 ![alt text](image-11.png)
 
@@ -1377,6 +1396,10 @@ Every method becomes a wall of conditionals. Every new state means editing every
 
 Instead of the `Order` asking *"what state am I in, and what should I do?"* — it simply asks the current state object *"handle this for me."*
 
+_State Transition Ownership:_ Who is responsible for transitioning from `PlacedState` to `ConfirmedState`?
+
+- **The Context (`Order`):** Centralizes the flow (easier to see the whole state machine), but the Context must know about all states (violates OCP).
+- **The Concrete States (GoF preferred):** As in the example below, states themselves call `order.setState(...)`. Respects OCP, but scatters transition logic across classes, making the overall flow harder to trace.
 
 ```java
 // State interface — every state must handle these actions
@@ -1806,6 +1829,325 @@ public class AmazonOrderProcessor {
 
 ---
 
+### 8. Mediator Design Pattern
+
+**Intuition:**
+The Mediator pattern reduces chaotic dependencies between interacting objects by forcing them to communicate strictly through a central mediator object.
+
+Instead of objects communicating directly (a tightly coupled many-to-many web), they only know about the mediator (a star topology). Think of an Air Traffic Control tower: airplanes don't talk directly to each other; they all talk to the tower, and the tower coordinates them.
+
+**Flow of Implementation:**
+
+- **Mediator Interface (`AirTrafficControl`)**: Declares methods for communication.
+- **Concrete Mediator (`ATCImpl`)**: Coordinates interactions between components.
+- **Components (`Flight`)**: Communicate entirely through the mediator rather than holding references to other components.
+
+**Code:**
+
+```java
+import java.util.*;
+
+interface AirTrafficControl {
+    void registerFlight(Flight flight);
+    void sendMessage(Flight sender, String message);
+}
+
+class ATCImpl implements AirTrafficControl {
+    private List<Flight> flights = new ArrayList<>();
+
+    public void registerFlight(Flight flight) {
+        flights.add(flight);
+    }
+
+    public void sendMessage(Flight sender, String message) {
+        for (Flight f : flights) {
+            if (f != sender) {
+                f.receive(message);
+            }
+        }
+    }
+}
+
+abstract class Flight {
+    protected AirTrafficControl atc;
+    protected String name;
+
+    public Flight(AirTrafficControl atc, String name) {
+        this.atc = atc;
+        this.name = name;
+    }
+    public abstract void send(String msg);
+    public abstract void receive(String msg);
+}
+
+class CommercialFlight extends Flight {
+    public CommercialFlight(AirTrafficControl atc, String name) {
+        super(atc, name);
+    }
+
+    public void send(String msg) {
+        System.out.println(this.name + " Sending: " + msg);
+        atc.sendMessage(this, msg);
+    }
+
+    public void receive(String msg) {
+        System.out.println(this.name + " Received: " + msg);
+    }
+}
+
+public class MediatorDemo {
+    public static void main(String[] args) {
+        AirTrafficControl tower = new ATCImpl();
+
+        Flight boeing747 = new CommercialFlight(tower, "Boeing 747");
+        Flight airbusA320 = new CommercialFlight(tower, "Airbus A320");
+
+        tower.registerFlight(boeing747);
+        tower.registerFlight(airbusA320);
+
+        boeing747.send("Requesting clearance to land.");
+    }
+}
+```
+
+**Respecting SOLID Principles:**
+
+- **SRP**: Communication and coordination logic live in one place, easier to comprehend and maintain.
+- **OCP**: You can introduce new mediators or components without changing the existing ones.
+
+---
+
+### 9. Memento Design Pattern
+
+**Intuition:**
+The Memento pattern allows you to capture and save an object's internal state so that it can be restored later, without violating encapsulation.
+
+It is the standard pattern for implementing "Undo" mechanisms, text editor histories, or game save systems.
+
+**Flow of Implementation:**
+
+- **Originator (`TextEditor`)**: The object whose state needs saving. Creates the memento and uses it to restore state.
+- **Memento (`EditorState`)**: A simple value object that acts as a snapshot of the Originator's state. It should be immutable.
+- **Caretaker (`History`)**: Keeps track of multiple mementos (e.g. in a Stack). It never modifies or inspects the contents of the memento.
+
+**Code:**
+
+```java
+import java.util.Stack;
+
+class EditorState {
+    private final String content;
+
+    public EditorState(String content) {
+        this.content = content;
+    }
+
+    public String getContent() {
+        return content;
+    }
+}
+
+class TextEditor {
+    private String content = "";
+
+    public void type(String words) {
+        content += words;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public EditorState save() {
+        return new EditorState(content);
+    }
+
+    public void restore(EditorState state) {
+        content = state.getContent();
+    }
+}
+
+class History {
+    private Stack<EditorState> states = new Stack<>();
+
+    public void push(EditorState state) {
+        states.push(state);
+    }
+
+    public EditorState pop() {
+        if (!states.isEmpty()) {
+            return states.pop();
+        }
+        return null;
+    }
+}
+
+public class MementoDemo {
+    public static void main(String[] args) {
+        TextEditor editor = new TextEditor();
+        History history = new History();
+
+        editor.type("Hello ");
+        history.push(editor.save());
+
+        editor.type("World!");
+        System.out.println("Current: " + editor.getContent()); // Hello World!
+
+        editor.restore(history.pop());
+        System.out.println("After Undo: " + editor.getContent()); // Hello
+    }
+}
+```
+
+**Respecting SOLID Principles:**
+
+- **Encapsulation (core feature):** The Originator doesn't expose its internal fields directly to the Caretaker. The Caretaker blindly holds the Memento object, maintaining strict boundaries.
+
+---
+
+### 10. Visitor Design Pattern
+
+**Intuition:**
+The Visitor pattern lets you separate an algorithm from the object structure on which it operates.
+
+Imagine a shopping cart with different items (`Book`, `Fruit`). You want export, tax calculation, and discounts. Instead of modifying `Book` and `Fruit` for every new feature, you create a Visitor that performs the operation. This uses **Double Dispatch**.
+
+**Flow of Implementation:**
+
+- **Element Interface (`ItemElement`)**: Declares an `accept(Visitor)` method.
+- **Concrete Elements (`Book`, `Fruit`)**: Implement `accept(Visitor)` by calling `visitor.visit(this)`.
+- **Visitor Interface (`ShoppingCartVisitor`)**: Declares a `visit()` method for every concrete element type.
+- **Concrete Visitors (`TaxVisitor`)**: Implements the actual logic for each item type.
+
+**Code:**
+
+```java
+interface ItemElement {
+    int accept(ShoppingCartVisitor visitor);
+}
+
+class Book implements ItemElement {
+    private int price;
+    public Book(int price) { this.price = price; }
+    public int getPrice() { return price; }
+
+    @Override
+    public int accept(ShoppingCartVisitor visitor) {
+        return visitor.visit(this); // Double Dispatch
+    }
+}
+
+class Fruit implements ItemElement {
+    private int pricePerKg;
+    private int weight;
+    public Fruit(int price, int weight) { this.pricePerKg = price; this.weight = weight; }
+    public int getPricePerKg() { return pricePerKg; }
+    public int getWeight() { return weight; }
+
+    @Override
+    public int accept(ShoppingCartVisitor visitor) {
+        return visitor.visit(this); // Double Dispatch
+    }
+}
+
+interface ShoppingCartVisitor {
+    int visit(Book book);
+    int visit(Fruit fruit);
+}
+
+class TaxVisitor implements ShoppingCartVisitor {
+    @Override
+    public int visit(Book book) {
+        // Books have flat Rs. 5 tax
+        return book.getPrice() + 5;
+    }
+
+    @Override
+    public int visit(Fruit fruit) {
+        // Fruits have 10% tax based on weight
+        return (fruit.getPricePerKg() * fruit.getWeight()) + 10;
+    }
+}
+
+public class VisitorDemo {
+    public static void main(String[] args) {
+        ItemElement[] items = new ItemElement[]{new Book(20), new Fruit(10, 2)};
+        ShoppingCartVisitor taxCalculator = new TaxVisitor();
+
+        int total = 0;
+        for (ItemElement item : items) {
+            total += item.accept(taxCalculator);
+        }
+        System.out.println("Total Cost with Tax: " + total);
+    }
+}
+```
+
+**Respecting SOLID Principles:**
+
+- **OCP**: Introduce a new behavior (e.g. `DiscountVisitor`) across disparate classes without touching `Book` or `Fruit`.
+- **SRP**: Gather related operations (e.g. all tax rules) into a single class instead of spreading them across the data classes.
+
+---
+
+### 11. Interpreter Design Pattern
+
+**Intuition:**
+The Interpreter pattern defines a grammatical representation for a language and provides an interpreter to deal with this grammar.
+
+It is highly specialized — typically used when building compilers, custom RegEx engines, SQL parsers, or mathematical expression evaluators.
+
+**Flow of Implementation:**
+
+- **Abstract Expression (`Expression`)**: Declares an `interpret()` method.
+- **Terminal Expression (`NumberExpression`)**: Implements `interpret()` for literal values in the grammar.
+- **Non-Terminal Expression (`AddExpression`)**: Implements `interpret()` for rules/operations that contain other expressions (forming a syntax tree).
+
+**Code:**
+
+```java
+interface Expression {
+    int interpret();
+}
+
+class NumberExpression implements Expression {
+    private int number;
+    public NumberExpression(int number) { this.number = number; }
+
+    @Override
+    public int interpret() { return number; }
+}
+
+class AddExpression implements Expression {
+    private Expression leftExpression;
+    private Expression rightExpression;
+
+    public AddExpression(Expression left, Expression right) {
+        this.leftExpression = left;
+        this.rightExpression = right;
+    }
+
+    @Override
+    public int interpret() {
+        return leftExpression.interpret() + rightExpression.interpret();
+    }
+}
+
+public class InterpreterDemo {
+    public static void main(String[] args) {
+        // Evaluates: (5 + 10)
+        Expression five = new NumberExpression(5);
+        Expression ten = new NumberExpression(10);
+
+        Expression addition = new AddExpression(five, ten);
+
+        System.out.println("Result: " + addition.interpret()); // Result: 15
+    }
+}
+```
+
+---
+
 ## Part 3: STRUCTURAL DESIGN PATTERNS
 
 Composition and relationship between class -> to build bigger structures.
@@ -1900,6 +2242,11 @@ PaymentProcessor processor = new StripeAdapter(new StripeSDK());
 processor.processPayment(499.00);   // works!
 processor.refundPayment("txn_123"); // works!
 ```
+
+_Object Adapter vs. Class Adapter:_
+The example above is an **Object Adapter** — the adapter uses composition to contain an instance of the incompatible `StripeSDK` class.
+
+There is also a **Class Adapter**, which relies on multiple inheritance (inheriting from both the Target interface and the Adaptee class simultaneously). Because Java does not support multiple class inheritance, Object Adapters are the standard approach.
 
 **Flow of Implementation:**
 
@@ -2137,6 +2484,11 @@ Add new Device → no need to touch Remotes
 **Intuition:**
 The Composite pattern lets you compose objects into tree structures to represent part-whole hierarchies. It allows clients to treat individual objects and compositions of objects uniformly.
 
+_The Safety vs. Transparency Trade-off:_
+When designing the base `EmployeeComponent`, you face an architectural dilemma regarding where to put child-management methods like `add()` and `remove()`:
+
+- **Transparency (GoF preferred):** Put `add()` / `remove()` in the abstract base class. Clients treat all nodes uniformly without caring if they are leaves or composites. Unsafe: calling `add()` on a leaf (`Employee`) throws a runtime exception.
+- **Safety (used in the code below):** Define `add()` / `remove()` only in composite classes (`Team`, `Department`). Safe (leaves can't be misused), but clients may need `instanceof` before adding children — slightly defeating uniform treatment.
 
 ```java
                    <<abstract>>
@@ -2270,6 +2622,12 @@ public class EmployeesDemo {
 **Intuition:**
 The Decorator pattern lets you attach new behaviors to objects dynamically by placing them inside special wrapper objects. It provides a flexible alternative to subclassing for extending functionality (avoiding class explosion).
 
+_Decorator vs. Proxy (Common Interview Confusion):_
+Both patterns wrap an object and implement its interface, so they look structurally identical. The difference is **intent**:
+
+- **Decorator:** Dynamically add behavior or state. The client usually creates the wrapped object and passes it to the decorator.
+- **Proxy:** Control access to an object. It often manages the lifecycle (instantiation) of the real object and hides it from the client.
+
 **Flow of Implementation:**
 
 - **Component Interface (`FoodItem`)**: Declares the common behaviors (`getDescription()`, `getPrice()`).
@@ -2361,6 +2719,9 @@ public class Swiggy {
 
 **Intuition:**
 The Facade pattern provides a simplified, unified interface to a complex subsystem. Instead of making the client interact with dozens of small classes, the facade provides a single high-level entry point.
+
+_Bypass Capability:_
+A Facade is **not** a strict wrapper or security layer. It provides a convenient shortcut for most use cases, but it does **not** prevent a power-user client from bypassing the Facade and talking directly to subsystem classes (e.g. `CPU`, `Memory`) when they need advanced, low-level functionality.
 
 **Flow of Implementation:**
 
@@ -2530,6 +2891,39 @@ class ProtectedRestaurantProxy implements RestaurantService {
 
 There's also a **Remote Proxy** — where the real object lives on a different server entirely, and the proxy handles the network call. The client doesn't know or care.
 
+#### 4. Smart Reference Proxy (Smart Pointer)
+
+The proxy performs additional housekeeping whenever the real object is accessed.
+
+```java
+interface Resource {
+    void use();
+}
+
+class RealResource implements Resource {
+    public void use() {
+        System.out.println("Using real resource.");
+    }
+}
+
+class SmartReferenceProxy implements Resource {
+    private RealResource real;
+    private int referenceCount = 0;
+
+    public SmartReferenceProxy(RealResource real) {
+        this.real = real;
+    }
+
+    public void use() {
+        referenceCount++;
+        System.out.println("Resource accessed. Active clients: " + referenceCount);
+        real.use();
+    }
+}
+```
+
+Widely used for keeping a reference count of active clients (to help with GC) or locking a real object so no other threads can alter it during access.
+
 **Intuition:**
 The Proxy pattern provides a surrogate or placeholder for another object to control access to it. It is heavily used for lazy loading, caching, or access control, allowing heavy operations to be deferred until absolutely necessary.
 
@@ -2600,5 +2994,140 @@ public class ImageDemo {
 
 - **SRP**: The `RealImage` handles the core logic of loading/displaying image data, while the `ImageProxy` handles the responsibility of lifecycle management and access control.
 - **OCP**: You can introduce new proxies (e.g., `SecureImageProxy`, `CachedImageProxy`) without modifying the client or the `RealImage` code.
+
+---
+
+### 14. Flyweight Design Pattern
+
+**Intuition:**
+The Flyweight pattern is a structural optimization pattern. It drastically minimizes RAM usage by sharing as much data as possible among similar objects.
+
+It is essential when the app must spawn tens of thousands of objects (e.g. rendering a million trees in a game, or every character in a text editor). Creating a unique object with full data for each instance would crash the system.
+
+The pattern divides an object's state into two parts:
+
+- **Intrinsic State:** Immutable data identical across many objects (e.g. the 3D mesh, texture, and color of an Oak Tree). Stored inside the Flyweight and shared.
+- **Extrinsic State:** Context-specific data that varies per instance (e.g. X, Y coordinates of where the tree is planted). Passed in by the client at runtime.
+
+**Flow of Implementation:**
+
+- **Flyweight (`TreeType`)**: Contains the intrinsic, shared state (`name`, `color`, `texture`).
+- **Flyweight Factory (`TreeFactory`)**: Manages a pool of existing Flyweights. Returns a cached `TreeType` or creates a new one if missing.
+- **Context (`Tree`)**: Contains the extrinsic state (coordinates) and a reference to the shared Flyweight (`TreeType`).
+- **Client (`Forest`)**: Creates context objects and passes extrinsic state during execution.
+
+**Code:**
+
+```java
+import java.util.HashMap;
+import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+
+// 1. The Flyweight (Intrinsic State - Shared & Immutable)
+class TreeType {
+    private String name;
+    private String color;
+    private String textureData; // Imagine this is a heavy 5MB image
+
+    public TreeType(String name, String color, String textureData) {
+        this.name = name;
+        this.color = color;
+        this.textureData = textureData;
+    }
+
+    public void draw(int x, int y) {
+        System.out.println("Drawing a " + color + " " + name + " tree at coordinates (" + x + ", " + y + ")");
+    }
+}
+
+// 2. Flyweight Factory (Caches shared states)
+class TreeFactory {
+    private static Map<String, TreeType> treeTypes = new HashMap<>();
+
+    public static TreeType getTreeType(String name, String color, String textureData) {
+        String key = name + "-" + color;
+
+        if (!treeTypes.containsKey(key)) {
+            treeTypes.put(key, new TreeType(name, color, textureData));
+            System.out.println("--- Created new TreeType in cache: " + name + " ---");
+        }
+        return treeTypes.get(key);
+    }
+}
+
+// 3. The Context (Extrinsic State - Unique per instance)
+class Tree {
+    private int x;
+    private int y;
+    private TreeType type;
+
+    public Tree(int x, int y, TreeType type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+    }
+
+    public void draw() {
+        type.draw(x, y);
+    }
+}
+
+// 4. Client
+class Forest {
+    private List<Tree> trees = new ArrayList<>();
+
+    public void plantTree(int x, int y, String name, String color, String textureData) {
+        TreeType type = TreeFactory.getTreeType(name, color, textureData);
+        Tree tree = new Tree(x, y, type);
+        trees.add(tree);
+    }
+
+    public void draw() {
+        for (Tree tree : trees) {
+            tree.draw();
+        }
+    }
+}
+
+public class FlyweightDemo {
+    public static void main(String[] args) {
+        Forest forest = new Forest();
+
+        // Planting 5 trees, but only 2 heavy TreeType objects will be created in memory
+        forest.plantTree(10, 20, "Oak", "Green", "oak_texture.png");
+        forest.plantTree(15, 25, "Oak", "Green", "oak_texture.png");
+        forest.plantTree(50, 40, "Oak", "Green", "oak_texture.png");
+
+        forest.plantTree(100, 200, "Pine", "Dark Green", "pine_texture.png");
+        forest.plantTree(105, 210, "Pine", "Dark Green", "pine_texture.png");
+
+        System.out.println("\nRendering Forest:");
+        forest.draw();
+    }
+}
+```
+
+**Core idea:** Without Flyweight, every `Tree` would carry its own copy of `name`, `color`, and the heavy `textureData`. With Flyweight, only unique combinations of that shared (intrinsic) data get created — each `Tree` just holds a reference to one.
+
+In the demo: 5 trees planted, but only 2 `TreeType` objects exist (`Oak-Green`, `Pine-DarkGreen`), each holding the heavy texture once.
+
+**The mechanism:**
+
+- **Intrinsic state** (`name`, `color`, `textureData`) — shared, immutable, expensive → lives in `TreeType`, cached once per unique combo by `TreeFactory`.
+- **Extrinsic state** (`x`, `y`) — unique per tree, cheap → lives in `Tree`, passed in at draw time.
+
+In the code: 5 `plantTree()` calls, but the HashMap key `name + "-" + color` collapses them to just 2 cached `TreeType` objects. Every `Tree` instance is now just two ints + a pointer — the 5MB texture is never duplicated.
+
+**Interview litmus test:** The pattern's value shows when **instance count >> type count**. 100,000 trees across 5 species still only pay for 5 `TreeType` objects — memory scales with unique types, not total instances. Ask: does this object's heavy data repeat across many instances, and can it be split into shared-immutable vs. instance-unique parts? If yes → Flyweight candidate.
+
+**RAM comparison — 10,000 Oak trees:**
+
+| Approach | Heavy Data (5MB Texture) | Lightweight Data (16 Bytes for X,Y) | Total RAM Required |
+| --- | --- | --- | --- |
+| Without Flyweight (Naive) | 10,000 copies × 5MB | 10,000 copies × 16 Bytes | ~50,000 MB (50 GB) |
+| With Flyweight (Optimized) | 1 shared copy × 5MB | 10,000 copies × 16 Bytes | ~5.16 MB |
+
+<img width="639" height="465" alt="image" src="https://github.com/user-attachments/assets/474cbafb-4801-4ca0-8798-99b9b2e8e800" />
 
 ---
