@@ -52,7 +52,7 @@ Structural Design Patterns (6):
 12. Facade
 13. Proxy
 
-Creational Design Patterns (6):
+Creational Design Patterns (7):
 
 14. Simple Factory
 15. Factory Method
@@ -60,6 +60,7 @@ Creational Design Patterns (6):
 17. Builder
 18. Prototype
 19. Singleton
+20. Object Pool
 
 ---
 
@@ -82,6 +83,9 @@ Creational design patterns centralize and abstract object creation, so the clien
 It consolidates object creation into one place.
 
 A Simple Factory is a single class with a method (usually static) that creates and returns different types of objects based on a given input parameter (like a **if-else or switch** case).
+
+_Note on Pattern Classification:_ The Simple Factory is technically considered a programming idiom rather than a true Gang of Four (GoF) design pattern. It relies heavily on conditional logic (`switch` / `if-else`), whereas true factory patterns (like Factory Method) rely on inheritance and polymorphism.
+
 **Flow of Implementation:**
 
 - **Product Interface (`ILogger`)**: Defines standard behavior.
@@ -145,6 +149,8 @@ public class Main {
 The Factory Method defines an **interface** for creating a single object, but **delegates** the exact instantiation logic to **subclasses**.
 
 Instead of using a direct constructor (`new Object()`), the client calls a factory method which returns the instance.
+
+_Key Distinction (The 1-to-Many Rule):_ Factory Method is used when you have **one product with many variants**. Abstract Factory is used for **many products grouped by a family, theme, or brand**.
 
 **Flow of Implementation:**
 
@@ -309,6 +315,8 @@ The Prototype pattern delegates the **cloning process** to the actual objects be
 
 It is used when creating a completely new object from scratch is extremely expensive or complex, so you simply copy an existing prototype instance instead.
 
+_Why Manual Cloning Fails:_ You cannot simply instantiate a new object and copy fields manually from the outside — external client code cannot access private fields (e.g. internal IDs, hidden state). Prototype uniquely solves this by placing `clone()` **inside** the class, so it has full access to its own private fields.
+
 **Flow of Implementation:**
 
 - **Prototype Interface (`ProductPrototype`)**: Declares the `clone()` method.
@@ -383,6 +391,53 @@ ENSURE TYPE OF COPY WHILE COPYING - SHALLOW OR DEEP (YOUR CHOICE, HAVE TO HANDLE
 The Builder pattern separates the construction of a complex object from its representation, allowing the same construction process to create different representations.
 
 It is extremely useful when an object requires **multiple setup steps**, avoiding a **giant constructor with dozens of parameters**.
+
+_Solving Telescoping Constructors:_ It formally solves the "Telescoping Constructors" anti-pattern — a class ending up with a massive, unreadable set of constructors due to multiple optional parameters.
+
+_Enforcing Immutability:_ Builder is the primary pattern used to create immutable objects. By passing the builder to a private constructor, all fields in the final product can be `final` with no setters. It also avoids the bug risks of passing `null` for optional parameters in a standard constructor.
+
+_Method Chaining (`return this`):_ Returning `this` from setters is what enables method chaining — the core mechanic that makes the Builder pattern fluent.
+
+Without returning `this`:
+
+```java
+class PizzaBuilder {
+    void setSize(String size) { this.size = size; }
+    void setCheese(boolean cheese) { this.cheese = cheese; }
+}
+
+// Usage — clunky, repetitive
+PizzaBuilder b = new PizzaBuilder();
+b.setSize("Large");
+b.setCheese(true);
+```
+
+With returning `this`:
+
+```java
+class PizzaBuilder {
+    PizzaBuilder setSize(String size) {
+        this.size = size;
+        return this;   // returns the current builder object
+    }
+    PizzaBuilder setCheese(boolean cheese) {
+        this.cheese = cheese;
+        return this;
+    }
+}
+
+// Usage — fluent, chained
+Pizza p = new PizzaBuilder()
+              .setSize("Large")
+              .setCheese(true)
+              .build();
+```
+
+Why it works: each `set` call returns the same builder instance, so the next `.set` can be called directly on the result — chaining calls into one expression instead of separate statements.
+
+Simplest mental test: if you can't chain `.methodA().methodB().methodC()`, the method isn't returning `this`.
+
+Interview note: chaining is a design convenience, not a requirement of the pattern — Builder still works without it, just less ergonomically.
 
 **Flow of Implementation:**
 
@@ -518,8 +573,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 class PaymentGatewayManager {
-    // 1. Static instance variable
-    private static PaymentGatewayManager instance;
+    // 1. Static instance variable — volatile is required for correct DCL
+    private static volatile PaymentGatewayManager instance;
     private static Lock mtx = new ReentrantLock();
 
     // 2. Private constructor
@@ -616,9 +671,122 @@ main
 → main calls manager.processPayment()
 ```
 
+**The Hardware Setup: Cores and Caches**
+
+Modern CPUs have multiple cores, allowing multiple threads to run truly in parallel.
+
+While all cores share the computer's Main Memory (RAM), RAM is relatively slow. Each CPU core therefore has its own private, ultra-fast memory bank built into the hardware — the **L1 Cache**.
+
+When a thread runs on a core, it prefers to read and write data to its private L1 cache rather than going all the way to Main Memory every time.
+
+**The Bug: The "Memory Visibility" Problem**
+
+Consider a classic Double-Checked Locking Singleton **without** the `volatile` keyword.
+
+Thread A is running on Core 1. It calls `getInstance()`, sees that `instance == null`, acquires the lock, creates the new `PaymentGatewayManager` object, and assigns it to the `instance` variable.
+
+Core 1 writes this new `instance` reference into its private L1 Cache for speed. It will eventually sync this data back to shared Main Memory, but it doesn't do it instantly.
+
+Thread B is running on Core 2. It calls `getInstance()`. Core 2 looks at Main Memory (or its own empty L1 Cache) to check the value of `instance`.
+
+Because Core 1 hasn't flushed its cache to Main Memory yet, Core 2 still sees `instance == null`.
+
+Thread B enters the `if` block, acquires the lock (which Thread A just released), and creates a second object — the Singleton is broken.
+
+In multi-threading, this is a **Memory Visibility** issue: Thread A changed the data, but Thread B couldn't see the change because it was hidden in Thread A's private cache.
+
+**The Fix: The `volatile` Keyword**
+
+When you add `volatile` to the instance variable:
+
+```java
+private static volatile PaymentGatewayManager instance;
+```
+
+you instruct the JVM and hardware how that variable must be handled: **do not use the local cache**.
+
+- **When Writing:** If Thread A writes to a `volatile` variable, it is forced to immediately flush that update to shared Main Memory.
+- **When Reading:** If Thread B reads a `volatile` variable, it is forced to bypass its local L1 Cache and fetch the freshest value directly from shared Main Memory.
+
+By forcing all reads and writes through Main Memory (the central source of truth), `volatile` guarantees that the moment Thread A creates the Singleton, Thread B will see it.
+
+**The Danger of Multi-threading without `volatile`:**
+
+Double-checked locking is fundamentally broken in Java without `volatile`, due to two hardware/JVM behaviors:
+
+1. **Instruction Reordering:** The JVM compiler might allocate memory and assign the reference to `instance` before the constructor finishes initializing its internal variables. Another thread might check `instance == null`, see it is false, and try to use a partially constructed object.
+2. **L1 Caching:** In multi-core CPUs, threads might cache `instance` in their local L1 cache instead of syncing with Main Memory, causing other threads to perceive `instance` as `null` and create duplicate objects.
+
+**The `volatile` Fix:** Declaring `private static volatile PaymentGatewayManager instance;` guarantees memory visibility across all threads (bypassing the cache) and creates a "happens-before" memory barrier, strictly preventing the CPU from reordering instructions.
+
 **Respecting SOLID Principles:**
 
 - _Note on SOLID_: Singleton is famously known to conflict with the Single Responsibility Principle (it manages its own lifecycle _and_ performs its business logic) and makes Dependency Inversion harder. However, practically, it fulfills the narrow requirement of global state regulation cleanly.
+
+---
+
+### 7. Object Pool Design Pattern
+
+**Intuition:**
+The Object Pool pattern manages a pre-instantiated collection (pool) of reusable objects instead of creating and destroying them on demand.
+
+It is used when object creation is **highly expensive** (e.g. DB connections, thread pools, web sockets) and the app needs them frequently but for short durations.
+
+**Flow of Implementation:**
+
+- **Reusable Object (`DBConnection`)**: The heavyweight, expensive object clients need.
+- **Object Pool (`ConnectionPool`)**: Maintains available and in-use objects; provides `acquire()` and `release()`.
+- **Client (`ObjectPoolDemo`)**: Requests an object from the pool, uses it, then returns it — instead of destroying it.
+
+**Code:**
+
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+class DBConnection {
+    public void connect() {
+        System.out.println("Connected to DB.");
+    }
+}
+
+class ConnectionPool {
+    private List<DBConnection> availableConnections = new ArrayList<>();
+    private List<DBConnection> usedConnections = new ArrayList<>();
+    private final int MAX_POOL_SIZE = 5;
+
+    public synchronized DBConnection acquireConnection() {
+        if (availableConnections.isEmpty() && usedConnections.size() < MAX_POOL_SIZE) {
+            availableConnections.add(new DBConnection());
+        } else if (availableConnections.isEmpty()) {
+            System.out.println("Maximum pool size reached. Please wait.");
+            return null;
+        }
+
+        DBConnection connection = availableConnections.remove(availableConnections.size() - 1);
+        usedConnections.add(connection);
+        return connection;
+    }
+
+    public synchronized void releaseConnection(DBConnection connection) {
+        if (connection != null) {
+            usedConnections.remove(connection);
+            availableConnections.add(connection);
+        }
+    }
+}
+
+public class ObjectPoolDemo {
+    public static void main(String[] args) {
+        ConnectionPool pool = new ConnectionPool();
+
+        DBConnection conn1 = pool.acquireConnection();
+        conn1.connect();
+
+        pool.releaseConnection(conn1);
+    }
+}
+```
 
 ---
 
