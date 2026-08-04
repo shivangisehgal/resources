@@ -1,3 +1,100 @@
+// =====================================================================================
+// LLD PROBLEM: Implement the internals of a HashMap (java.util.HashMap from scratch)
+// Time budget: 45-60 min | Java 17
+// =====================================================================================
+//
+// CONSTRAINT: Cannot use any JDK associative collection anywhere in the solution -
+//             no HashMap, LinkedHashMap, Hashtable, TreeMap, ConcurrentHashMap, HashSet.
+//             Arrays, plain objects and my own linked structures are allowed.
+//             Must be generic: MyHashmap<K, V>.
+//
+// -------------------------------------------------------------------------------------
+// FUNCTIONAL REQUIREMENTS (the API contract)
+// -------------------------------------------------------------------------------------
+// V       put(K key, V value)   insert or overwrite; returns PREVIOUS value, null if absent
+// V       get(K key)            mapped value, or null if absent
+// V       remove(K key)         removes mapping, returns old value, or null
+// boolean containsKey(K key)    presence check
+// int     size()                number of live mappings
+// boolean isEmpty()             convenience over size()
+// void    clear()               drop all mappings
+//
+// STATUS in this file: put/get/remove done but return void (should return old value).
+//                      containsKey / size / isEmpty / clear still TODO.
+//
+// -------------------------------------------------------------------------------------
+// BEHAVIOURAL RULES
+// -------------------------------------------------------------------------------------
+// 1. null KEY is allowed - exactly one, like the JDK. Decide where it lives and justify.
+//    (Here: hash(null) == 0, so it always lands in bucket 0. No special-cased field.)
+// 2. null VALUE is allowed => get() returning null is AMBIGUOUS (absent vs. mapped-to-null).
+//    This is exactly why containsKey() must exist as a separate operation.
+// 3. Key equality = hashCode() + equals(), never == :
+//       - equal objects MUST have the same hashCode
+//       - same hashCode does NOT imply equal (collision)
+//       - so compare hash first (cheap int compare), then equals() (may be expensive)
+//       - use Objects.equals(a, b) so a null key doesn't NPE
+// 4. Mutating a key's hash-relevant fields AFTER insertion "loses" the entry. Acceptable -
+//    but be ready to explain why (it now hashes to a different bucket).
+//
+// -------------------------------------------------------------------------------------
+// NON-FUNCTIONAL REQUIREMENTS
+// -------------------------------------------------------------------------------------
+// - Average case O(1) for put / get / remove.
+// - Worst case must degrade GRACEFULLY: all-colliding keys => O(n) chain, still usable.
+// - Memory proportional to entry count. Shrinking on mass-delete not required (discuss it).
+// - NOT required to be thread-safe. Be ready to say what breaks if 2 threads resize at once
+//   (lost entries, and in JDK7 a cyclic chain => infinite loop on get).
+//
+// -------------------------------------------------------------------------------------
+// DESIGN POINTS THE INTERVIEWER WILL DRILL INTO (must be able to explain each)
+// -------------------------------------------------------------------------------------
+// 1. Bucket array + indexing: why is capacity a power of 2? hash & (n-1) vs hash % n.
+// 2. Hash spreading: why h ^ (h >>> 16)? What breaks without it (only low bits used, so
+//    keys differing only in high bits all collide).
+// 3. Collision resolution: separate chaining vs open addressing (linear / quadratic /
+//    double hashing). State the trade-off. Open addressing => deletion needs tombstones.
+// 4. Load factor + resizing: when, by how much, cost of rehash, and why put() is still
+//    O(1) AMORTISED. Why 0.75 (space/collision trade-off).
+// 5. Treeification: JDK converts a bucket to a red-black tree past 8 entries. Not required
+//    to implement - know why the threshold exists (hash-collision DoS => O(n) -> O(log n)).
+// 6. Iteration order: why it is unspecified, and what would have to change to make it
+//    insertion-ordered (i.e. LinkedHashMap: doubly-linked list threaded through nodes).
+//
+// -------------------------------------------------------------------------------------
+// EXPECTED DELIVERABLES
+// -------------------------------------------------------------------------------------
+// - Working MyHashmap<K, V>; Node kept private / static nested (no outer ref per node).
+// - A small runnable demo.
+// - Unit tests covering the ADVERSARIAL cases, not just the happy path:
+//     overwrite on duplicate key                     null key, null value
+//     crafted colliding keys (hashCode() -> const)   removal from MIDDLE of a chain
+//     removal of head / only node / absent key       growth across several resizes
+//     size() correct throughout
+//
+// -------------------------------------------------------------------------------------
+// LIKELY FOLLOW-UPS
+// -------------------------------------------------------------------------------------
+// - keySet() / values() / entrySet(); make it Iterable<Entry<K, V>>.
+// - Make it thread-safe: single lock vs striped locks (JDK7) vs CAS on bins (JDK8+).
+//   Where is the contention?
+// - Fail-fast iteration via a modification counter (modCount).
+// - Per-entry TTL: lazy vs active eviction.
+// - Turn it into a bounded LRU cache.
+// - computeIfAbsent / merge / getOrDefault without breaking null-value semantics.
+// - Shrink the table when sparse - why does the JDK deliberately NOT do this?
+//
+// -------------------------------------------------------------------------------------
+// EVALUATION RUBRIC
+// -------------------------------------------------------------------------------------
+// Correctness   - collisions, duplicates, removals, nulls; no lost entries
+// Complexity    - justify O(1) average + amortised resize
+// API design    - clean, minimal, generic; matches documented contract
+// Code quality  - small focused methods, clear names, Node private
+// Testing       - deliberately adversarial
+// Communication - trade-offs said out loud, assumptions surfaced early
+// =====================================================================================
+
 
 import java.util.Objects;
 
