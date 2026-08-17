@@ -1,0 +1,45 @@
+@startuml
+title Logging System - Sequence Diagram
+
+actor Client
+participant Logger
+participant "DebugHandler" as Debug
+participant "InfoHandler" as Info
+participant "WarnHandler" as Warn
+participant "ErrorHandler" as Error
+participant "ConsoleAppender" as Console
+participant "FileAppender" as File
+participant "LogFormatter" as Formatter
+
+Client -> Logger : error("Payment failed")
+Logger -> Logger : log(ERROR, message)
+Logger -> Logger : create LogMessage
+Logger -> Debug : handle(message)
+
+Debug -> Debug : canHandle(ERROR)?
+Debug -> Info : handle(message)
+
+Info -> Info : canHandle(ERROR)?
+Info -> Warn : handle(message)
+
+Warn -> Warn : canHandle(ERROR)?
+Warn -> Error : handle(message)
+
+Error -> Error : canHandle(ERROR)?
+Error -> Error : notifyObservers(message)
+
+par console
+  Error -> Console : append(message)
+  Console -> Formatter : format(message)
+  Formatter --> Console : formatted text
+  Console --> Error : output to console
+else file
+  Error -> File : append(message)
+  File -> Formatter : format(message)
+  Formatter --> File : formatted text
+  File --> Error : synchronized write + flush
+end
+
+Error --> Logger : handled
+Logger --> Client : return
+@enduml

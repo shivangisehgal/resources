@@ -1,0 +1,7 @@
+LLD Logger package
+
+README.md - interview study notes / walkthrough
+src/ - logger Java implementation
+UML/LoggerDesign.puml - UML class diagram
+UML/LoggerFlow.puml - UML sequence diagram
+REFERENCES.md - source references and implementation caveats

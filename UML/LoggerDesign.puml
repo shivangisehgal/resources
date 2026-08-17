@@ -1,0 +1,115 @@
+@startuml
+title Logging System - Class Diagram
+
+skinparam classAttributeIconSize 0
+
+class Logger {
+  - INSTANCE : Logger
+  - handlerChain : LogHandler
+  - Logger()
+  + getInstance() : Logger
+  + log(level : LogLevel, message : String)
+  + debug(msg : String)
+  + info(msg : String)
+  + warn(msg : String)
+  + error(msg : String)
+  + fatal(msg : String)
+}
+
+enum LogLevel {
+  TRACE
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  FATAL
+}
+
+class LogMessage {
+  - level : LogLevel
+  - message : String
+  - timestamp : long
+}
+
+interface LogFormatter {
+  + format(message : LogMessage) : String
+}
+
+class PlainTextFormatter
+class JsonFormatter
+
+interface LogAppender {
+  + append(message : LogMessage)
+}
+
+class ConsoleAppender {
+  - formatter : LogFormatter
+}
+
+class FileAppender {
+  - formatter : LogFormatter
+  - writer : BufferedWriter
+  + append(message : LogMessage)
+  + close()
+}
+
+abstract class LogHandler {
+  # next : LogHandler
+  # appenders : List<LogAppender>
+  + subscribe(observer : LogAppender)
+  + notifyObservers(message : LogMessage)
+  + handle(message : LogMessage)
+  # canHandle(level : LogLevel) : boolean
+}
+
+class DebugHandler
+class InfoHandler
+class WarnHandler
+class ErrorHandler
+class FatalHandler
+
+class LogHandlerConfiguration {
+  + build() : LogHandler
+  + addAppenderForLevel(level : LogLevel, appender : LogAppender)
+}
+
+class Main
+
+Logger "1" --> "1" LogHandler : starts chain
+Logger ..> LogMessage : creates
+LogMessage --> LogLevel
+
+LogFormatter <|.. PlainTextFormatter
+LogFormatter <|.. JsonFormatter
+
+LogAppender <|.. ConsoleAppender
+LogAppender <|.. FileAppender
+
+ConsoleAppender --> LogFormatter : uses
+FileAppender --> LogFormatter : uses
+
+LogHandler <|-- DebugHandler
+LogHandler <|-- InfoHandler
+LogHandler <|-- WarnHandler
+LogHandler <|-- ErrorHandler
+LogHandler <|-- FatalHandler
+
+LogHandler "1" o-- "*" LogAppender : observers
+
+DebugHandler --> InfoHandler : next
+InfoHandler --> WarnHandler : next
+WarnHandler --> ErrorHandler : next
+ErrorHandler --> FatalHandler : next
+
+LogHandlerConfiguration ..> DebugHandler : creates
+LogHandlerConfiguration ..> InfoHandler : creates
+LogHandlerConfiguration ..> WarnHandler : creates
+LogHandlerConfiguration ..> ErrorHandler : creates
+LogHandlerConfiguration ..> FatalHandler : creates
+
+Main ..> Logger
+Main ..> LogHandlerConfiguration
+Main ..> ConsoleAppender
+Main ..> FileAppender
+Main ..> PlainTextFormatter
+@enduml
