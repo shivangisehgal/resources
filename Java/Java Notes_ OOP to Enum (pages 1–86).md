@@ -1,6 +1,6 @@
 # Java Notes: OOP → Enum (Pages 1–86)
 
-> Corrections to the notebook are marked **⚠**. The notebook ends mid-way through Singleton (lazy init), so that part is partial.
+> Corrections to the notebook are marked **⚠**. The notebook ends mid-way through Singleton (lazy init); the rest of that section (synchronized, double-check locking, Bill Pugh, enum, breaking a singleton) has been filled in.
 
 ---
 
@@ -117,6 +117,78 @@ Every primitive has an object type: int→Integer, char→Character, short→Sho
 - **Why**: collections work only with objects; wrappers give reference semantics (primitives live on the stack, not the heap).
 - **Autoboxing**: primitive → wrapper (`Integer a1 = a;`). **Unboxing**: wrapper → primitive (`int x1 = n;`).
 
+### Quick recap: primitives, floating point & wrappers
+
+1. **Narrowing requires casting**: `int → byte`
+   ```java
+   byte b = (byte) x;
+   ```
+2. **byte/short/char arithmetic promotes to int**: `byte + byte → int`
+3. **`float` = 32 bits**, **`double` = 64 bits**
+4. **float/double use IEEE-754 binary floating point**
+5. **`0.1 + 0.2 ≠` exactly `0.3`**, because 0.1 and 0.2 aren't exactly representable in binary
+6. **Autoboxing**: `int → Integer`
+7. **Unboxing**: `Integer → int`
+8. **Integer cache**: guaranteed for **-128 to 127**
+9. **`==` on Integer → reference comparison**; **`equals()` → value comparison**
+10. **Unboxing `null` → `NullPointerException`**
+11. **Collections use wrappers**: `List<Integer>`, not `List<int>`
+12. **Overloaded methods can behave differently**:
+    - `remove(1)` → removes by **index**
+    - `remove(Integer.valueOf(1))` → removes by **value**
+
+```java
+Integer a = 127, b = 127;   a == b        // true  (cached)
+Integer c = 128, d = 128;   c == d        // false (two different objects)
+                            c.equals(d)   // true
+Integer n = null;  int x = n;             // NullPointerException
+System.out.println(0.1 + 0.2);            // 0.30000000000000004
+```
+
+### `==` vs `equals()`
+
+| | `==` | `equals()` |
+| --- | --- | --- |
+| Primitives | compares **values** | n/a (primitives have no methods) |
+| References | compares **identity** (same object in heap?) | compares **content**, *if the class overrides it* |
+| Default | operator, can't be changed | `Object.equals()` is just `this == obj` |
+
+`String`, wrappers, `List`, `Map` etc. override `equals()` to compare content. Your own classes compare by identity unless you override it.
+
+```java
+String s1 = "hello", s2 = "hello", s3 = new String("hello");
+s1 == s2       // true  (same pooled literal)
+s1 == s3       // false (s3 is a separate heap object)
+s1.equals(s3)  // true  (same characters)
+```
+
+**Rules when overriding `equals()`**: it must be **reflexive** (`x.equals(x)`), **symmetric**, **transitive**, **consistent**, and `x.equals(null)` must be `false`. **Always override `hashCode()` too**: equal objects must have equal hash codes, otherwise `HashMap`/`HashSet` break (two "equal" keys land in different buckets).
+
+```java
+@Override public boolean equals(Object o) {
+  if (this == o) return true;
+  if (!(o instanceof Student s)) return false;
+  return rollNumber == s.rollNumber && Objects.equals(name, s.name);
+}
+@Override public int hashCode() { return Objects.hash(rollNumber, name); }
+```
+
+### String intern
+
+`intern()` returns the **canonical copy** of a string from the String Constant Pool: if an equal string is already pooled, that reference is returned; otherwise this string is added to the pool and returned.
+
+```java
+String a = "java";
+String b = new String("java");   // separate heap object
+String c = b.intern();           // pooled reference
+a == b   // false
+a == c   // true
+```
+
+- **Literals and compile-time constants** (`"ja" + "va"`) are interned automatically. Strings built **at runtime** (`s1 + s2`, `sb.toString()`) are not.
+- Since **Java 7** the pool lives in the **regular heap** (earlier in PermGen), so pooled strings can be garbage collected.
+- Use case: saving memory when many duplicate strings live long (e.g. repeated codes read from a file). Don't use it to make `==` work; use `equals()` for comparing strings.
+
 ---
 
 ## 4. Methods
@@ -139,7 +211,7 @@ public int sum(int a, int b) throws Exception { /* body */ }
 - **Static**: belongs to class; call via class name; **can't access non-static members; can't be overridden**. Use for methods not modifying object state, utility methods using only arguments (e.g. factory pattern).
 - **Final**: can't be overridden (overriding would be pointless if the implementation can't change).
 - **Abstract**: only declaration, in abstract classes; implemented by child classes.
-- **Varargs**: `int sum(int a, int... nums)`: variable number of args; **only one, and must be last**. Call with any number: `sum(3)`, `sum(3,8,9,10)`.
+- **Varargs**: `int sum(int a, int... nums)`: variable number of args; **only one, and must be last**. Call with any number: `sum(3)`, `sum(3,8,9,10)`. Internally varargs is an **array** (see *Generics + varargs → heap pollution* in §8).
 
 ---
 
@@ -184,6 +256,28 @@ JVM manages two memories: **Stack** and **Heap**.
 
 **Walkthrough**: in `main`, `int p=10; Person personObj=new Person(); String s="24"; MemoryManagement memObj=new MemoryManagement(); memObj.test(personObj);`. `p` sits on the stack; `personObj`/`memObj` are stack references to heap objects; `"24"` goes into the string pool. When `test()` is called it gets its own stack block (copy of reference `personObj2`, `stringLiteral2="24"`, `stringLiteral3 = new String("24")`). On `}` of `test()` its block is popped; then `main`'s block is popped. Heap objects remain, now **unreferenced**, so GC removes them. GC runs periodically (JVM decides); `System.gc()` is only a hint; GC frequency rises as heap fills. **⚠** Literal → pool; `new String("24")` → separate heap object (the notebook's diagram has these arrows swapped).
 
+### Escape analysis
+
+"Objects go on the heap" is the language model; the **JIT compiler** can do better. **Escape analysis** checks whether an object created in a method can be seen **outside** that method or thread:
+
+- **No escape**: object used only inside the method → candidate for optimisation.
+- **Method escape**: returned, or passed to another method that stores it.
+- **Thread escape**: stored in a static/shared field, visible to other threads.
+
+If an object **doesn't escape**, the JIT (HotSpot C2) can:
+
+1. **Scalar replacement**: skip creating the object; keep its fields as local variables in registers/stack. (HotSpot doesn't allocate whole objects on the stack; it breaks them into fields.)
+2. **Lock elision**: remove `synchronized` on an object no other thread can see.
+
+```java
+int distance(int x, int y) {
+  Point p = new Point(x, y);      // never leaves this method
+  return p.x * p.x + p.y * p.y;   // JIT can turn this into plain ints: no heap allocation, no GC work
+}
+```
+
+Enabled by default (`-XX:+DoEscapeAnalysis`). Benefit: fewer allocations → less GC pressure. It only kicks in for hot, JIT-compiled code, so don't write code relying on it.
+
 ### Reference types
 
 - **Strong**: normal reference (`Person p = new Person();`); GC never collects while it exists.
@@ -193,7 +287,24 @@ JVM manages two memories: **Stack** and **Heap**.
 
 ### Heap structure
 
-**Young Generation** (Eden + S0 + S1 survivors), **Old Generation**, plus non-heap **Metaspace**. **Minor GC** (young gen, fast, frequent):
+**Young Generation** (Eden + S0 + S1 survivors), **Old Generation**, plus non-heap **Metaspace**. Where everything sits in the process's memory:
+
+```
+Operating System RAM
+│
+├── JVM Heap
+│    ├── Young Generation
+│    └── Old Generation
+│
+├── Metaspace          ← native memory
+├── Thread Stacks      ← native memory
+├── Code Cache         ← native memory
+└── Other JVM native structures
+```
+
+So `-Xmx` limits only the **heap**; the Java process uses more RAM than that (metaspace, one stack per thread, JIT-compiled code in the code cache, GC bookkeeping, direct buffers…).
+
+**Minor GC** (young gen, fast, frequent):
 
 1. New objects are created in **Eden**.
 2. GC **marks** unreferenced objects, **sweeps** them, moves survivors to S0 or S1 with **age +1**.
@@ -209,7 +320,52 @@ JVM manages two memories: **Stack** and **Heap**.
 - **Serial GC**: single GC thread for minor + major; slow, and all app threads pause ("stop-the-world").
 - **Parallel GC**: multiple GC threads (based on CPU); shorter pauses. **Java 8 default.**
 - **CMS (Concurrent Mark & Sweep)**: runs concurrently with app threads (best effort, no guarantee); **no compaction**.
-- **G1**: improved CMS; tries not to pause the app, **supports compaction**. Newer Java versions use CMS/G1 → minimal pause, higher throughput, lower latency.
+- **G1**: improved CMS; tries not to pause the app, **supports compaction**. Newer Java versions use CMS/G1 → minimal pause, higher throughput, lower latency. **⚠** G1 is the **default since Java 9**; CMS was deprecated in Java 9 and **removed in Java 14**.
+- **ZGC / Shenandoah**: newer low-pause collectors; do almost all work concurrently, pauses typically around a millisecond, regardless of heap size.
+
+### GC throughput vs latency
+
+- **Throughput** = % of total time the app spends doing *its own work* (not GC). E.g. 99% throughput → 1% of time in GC. Measures **how much work gets done overall**.
+- **Latency** (pause time) = how long the app is **frozen** during a single GC pause. Measures **how responsive** the app is at any moment.
+- **Footprint** = extra memory the GC needs. You can usually optimise two of the three, not all.
+
+**The trade-off**: concurrent collectors cut pauses by running alongside the app, but they cost extra CPU and bookkeeping, so total throughput drops. Stop-the-world collectors are more efficient overall but freeze the app for longer at a time. *Analogy: cleaning a restaurant. Closing it for an hour at night (throughput) is efficient; cleaning while customers eat (latency) keeps it open but costs more effort.*
+
+| Goal | Workload examples | Prefer |
+| --- | --- | --- |
+| **Throughput** | batch jobs, ETL, report generation, data processing, offline computation: nobody waits on a single request | **Parallel GC** (`-XX:+UseParallelGC`) |
+| **Latency** | web APIs, trading systems, games, user-facing services: a long pause = slow response / timeout | **G1** (balanced default, `-XX:MaxGCPauseMillis`), or **ZGC / Shenandoah** for very low pauses on large heaps |
+
+Rule of thumb: **batching → throughput → Parallel GC; user waiting → latency → G1/ZGC.**
+
+### Releasing resources: `finalize()` vs try-with-resources
+
+GC frees **memory** only. Files, sockets, DB connections are **OS resources** and must be closed explicitly.
+
+**`finalize()`** (method in `Object`): the GC *may* call it on an object before reclaiming it. Problems:
+
+- **No guarantee when, or even whether, it runs** (the program can exit first).
+- Slows GC: such objects need an extra GC cycle to be collected.
+- An exception thrown inside it is silently ignored.
+- The object can be "resurrected" (finalize stores `this` somewhere).
+
+Hence **deprecated in Java 9** and **deprecated for removal in Java 18**. Never use it for cleanup. Alternatives: **try-with-resources** (normal case) or `java.lang.ref.Cleaner` (safety net).
+
+**try-with-resources** (Java 7): resources declared in `try(...)` are **closed automatically** when the block ends, normally or via exception. The resource must implement **`AutoCloseable`** (or `Closeable`).
+
+```java
+try (FileReader fr = new FileReader("a.txt");
+     BufferedReader br = new BufferedReader(fr)) {
+    System.out.println(br.readLine());
+} catch (IOException e) {
+    e.printStackTrace();
+}   // br.close() then fr.close() called automatically
+```
+
+- Resources are closed in **reverse order** of declaration.
+- If the body throws and `close()` also throws, the body's exception is thrown; the close exception is attached as **suppressed** (`e.getSuppressed()`). With old try/finally, the close exception would *replace* the real one.
+- Java 9+: an existing **effectively final** variable can be used directly: `try (br) { ... }`.
+- Replaces the verbose `finally { if (br != null) br.close(); }` pattern.
 
 ---
 
@@ -296,7 +452,63 @@ Integer v = p.getPrintValue();   // no cast
 
 **Wildcard vs generic method**: wildcards are less restrictive. `computeList(List<? extends Number> src, List<? extends Number> dst)` accepts `List<Integer>` + `List<Float>`; `<T extends Number> computeList1(List<T> src, List<T> dst)` needs the **same** type for both (compile error otherwise). Wildcards can use `super`; generic methods can't.
 
+**PECS rule: Producer `extends`, Consumer `super`.** Decides which wildcard to use for a parameter:
+
+- If the collection **produces** values for you (you **read** from it) → `? extends T`. You can read items as `T`, but **can't add** (except `null`): the compiler doesn't know whether it's a `List<Integer>` or `List<Double>`.
+- If the collection **consumes** values from you (you **write** into it) → `? super T`. You can **add** `T` safely, but reading only gives you `Object`.
+- Both read and write → no wildcard, use exact `List<T>`.
+
+```java
+// src produces T's, dest consumes T's (this is how Collections.copy is declared)
+static <T> void copy(List<? super T> dest, List<? extends T> src) {
+    for (T item : src) dest.add(item);
+}
+
+List<Integer> ints = List.of(1, 2, 3);
+List<Number>  nums = new ArrayList<>();
+copy(nums, ints);   // ✓ Integer list produces, Number list consumes
+
+List<? extends Number> ro = ints;  Number n = ro.get(0);  // ✓ read
+// ro.add(5);                                             // ✗ compile error
+List<? super Integer> wo = nums;   wo.add(5);             // ✓ write
+Object o = wo.get(0);                                     // read only as Object
+```
+
 **Type erasure**: generics exist only at compile time; in bytecode `T` is replaced by `Object` (or by its bound: `T extends Number` → `Number`, `T extends Bus` → `Bus`). Applies to generic classes and generic methods alike.
+
+**Generics + varargs → heap pollution**
+
+```
+Generics + varargs
+        ↓
+Generic array jaisa structure
+        ↓
+Type erasure
+        ↓
+Runtime exact generic type nahi jaanta
+        ↓
+Wrong generic object ghus sakta hai
+        ↓
+Heap pollution
+
+@SafeVarargs =
+"I promise this method aisa unsafe kaam nahi karega."
+```
+
+```java
+static void unsafe(List<String>... lists) {   // really a List[] at runtime
+    Object[] arr = lists;
+    arr[0] = List.of(42);                      // no error: runtime only sees List
+    String s = lists[0].get(0);                // ClassCastException, far from the real bug
+}
+```
+
+**Heap pollution** = a variable of a parameterised type (`List<String>`) points to an object that isn't actually that type. The compiler warns "possible heap pollution" on such methods. Add **`@SafeVarargs`** only if the method **doesn't write into the varargs array or leak it**; it's allowed on `static`, `final` and `private` methods (private since Java 9) and constructors, i.e. methods that can't be overridden.
+
+```java
+@SafeVarargs
+static <T> List<T> listOf(T... items) { return new ArrayList<>(Arrays.asList(items)); } // only reads: safe
+```
 
 ---
 
@@ -384,9 +596,22 @@ Enum gives **better readability** and **control over which values can be passed*
 
 A class that **cannot be inherited**: `public final class TestClass {}`; `class X extends TestClass` → compile error "Cannot inherit from final".
 
+**`final` on a reference variable ≠ immutable object**
+
+```java
+final List<String> list = new ArrayList<>();
+list.add("a");                 // ✓ allowed: the list's contents change
+list.remove("a");              // ✓ allowed
+list = new ArrayList<>();      // ✗ compile error: can't re-point a final variable
+```
+
+> `final` means the variable `list` cannot point to another list. The `ArrayList` itself is still mutable.
+
+For a truly unmodifiable list use `List.of(...)` or `Collections.unmodifiableList(list)` (the latter is a read-only *view*; changes to the original still show through).
+
 ---
 
-## 12. Singleton Class *(pages 85–86; notebook continues beyond)*
+## 12. Singleton Class *(pages 85–86, completed beyond the notebook)*
 
 **Goal**: only **one object** of the class ever exists (e.g. a DB connection). Ways: Eager init · Lazy init · Synchronized block · Double-check locking (memory-visibility issue, fixed with a `volatile` instance variable) · Bill Pugh solution · Enum singleton.
 
@@ -412,3 +637,100 @@ public static DBConnection getInstance() {
   return conObject;
 }
 ```
+Problem: **not thread-safe**. Two threads can both see `conObject == null` and both create an object.
+
+**Synchronized method**: `public static synchronized DBConnection getInstance()`. Safe, but **every** call takes the lock, even after the object exists → slow.
+
+**Double-check locking**: lock only while the object is being created.
+
+```java
+private static volatile DBConnection conObject;     // volatile is required
+public static DBConnection getInstance() {
+  if (conObject == null) {                          // 1st check: no lock (fast path)
+    synchronized (DBConnection.class) {
+      if (conObject == null) {                      // 2nd check: another thread may have created it
+        conObject = new DBConnection();
+      }
+    }
+  }
+  return conObject;
+}
+```
+
+Without `volatile`, instructions can be **reordered**: the reference may be assigned before the constructor finishes, so another thread sees a non-null but half-built object. `volatile` also ensures the write is visible to all threads (not just cached in one CPU core).
+
+**Bill Pugh solution**
+
+Bill Pugh Singleton uses a static inner class to achieve lazy initialization and thread safety without explicit synchronization.
+
+```java
+public class DBConnection {
+  private DBConnection() {}
+  private static class Holder {                       // not loaded until first used
+    private static final DBConnection INSTANCE = new DBConnection();
+  }
+  public static DBConnection getInstance() { return Holder.INSTANCE; }
+}
+```
+
+```
+Singleton class loaded
+       ↓
+INSTANCE not created yet
+
+getInstance() called for first time
+       ↓
+Holder class gets loaded
+       ↓
+INSTANCE = new Singleton()
+       ↓
+JVM guarantees only one thread initializes it
+```
+
+**Enum singleton**
+
+```java
+public enum DBConnection {
+  INSTANCE;
+  public void connect() { /* ... */ }
+}
+DBConnection.INSTANCE.connect();
+```
+
+**Why creation is thread-safe**: enum constants are `public static final` fields created in the enum's **static initialiser**. The JVM runs a class's static initialisation **exactly once**, holding an initialisation lock: if several threads touch the enum at the same moment, one initialises it and the others wait. So `INSTANCE` is created once, with no `synchronized`/`volatile` code from you. (Only *creation* is thread-safe; if its methods change shared fields, those still need synchronisation.) Downsides: not lazy in the Bill Pugh sense (created when the enum is first used), and can't extend another class.
+
+### Breaking a singleton (and fixing it)
+
+**1. Reflection**: reflection can call the private constructor.
+
+```java
+DBConnection one = DBConnection.getInstance();
+Constructor<DBConnection> c = DBConnection.class.getDeclaredConstructor();
+c.setAccessible(true);                 // bypasses `private`
+DBConnection two = c.newInstance();    // second object! one != two
+```
+
+*Fix*: throw from the constructor if an instance already exists (works for eager and Bill Pugh), or use an **enum**: the JVM refuses `newInstance()` on enums with `IllegalArgumentException: Cannot reflectively create enum objects`.
+
+```java
+private DBConnection() {
+  if (conObject != null) throw new IllegalStateException("Use getInstance()");
+}
+```
+
+**2. Serialization**: if the singleton implements `Serializable`, deserialization builds a **new object** without calling the constructor.
+
+```java
+out.writeObject(DBConnection.getInstance());
+DBConnection copy = (DBConnection) in.readObject();  // copy != original
+```
+
+*Fix*: add `readResolve()`; Java calls it after deserialising and uses its return value instead of the new object. Also mark instance fields `transient`.
+
+```java
+protected Object readResolve() { return getInstance(); }
+```
+
+An **enum** needs no fix: enums are serialised by name and deserialised via `valueOf()`, so the same constant comes back.
+
+**Takeaway**: the **enum singleton** is thread-safe in creation and safe against reflection and serialization by default, which is why *Effective Java* calls it the best way to implement a singleton when you don't need lazy loading or inheritance.
