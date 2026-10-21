@@ -261,6 +261,22 @@ executor.shutdown();  // graceful: finish queued tasks, accept no new ones
 
 Five tasks, three threads: tasks 1–3 start immediately, task 4 takes the first thread that frees up, then task 5. Order varies between runs, which is normal.
 
+Assuming 5 tasks, 2 threads, 1-hour sleep, and println() happens before sleep, with execution starting at 10:00 AM:
+10:00 AM  Task 1 on pool-1-thread-1
+10:00 AM  Task 2 on pool-1-thread-2
+
+11:00 AM  Task 3 on pool-1-thread-1
+11:00 AM  Task 4 on pool-1-thread-2
+
+12:00 PM  Task 5 on pool-1-thread-1
+
+
+Timeline:
+- 10–11 AM: Threads 1 and 2 sleeping. Tasks 3, 4, 5 queued.
+- 11–12 PM: Tasks 3 and 4 running/sleeping. Task 5 queued.
+- 12–1 PM: Task 5 sleeping. Thread 2 free.
+- 1 PM: All tasks completed.
+
 *Why not just make 5 threads?* Because with 50 or 5,000 tasks you can't make one thread per task. Too many threads fight for the CPU and spend their time context switching instead of working.
 
 **Benefits:** resource management (prevents overload), performance (reuse avoids creation cost), predictability (you control the thread count), task management (queueing, scheduling, monitoring).
